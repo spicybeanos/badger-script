@@ -1,0 +1,9 @@
+
+import "p.bds";
+
+println("Hello world\t\tds\nskibidi", "fsjdf");
+
+num x = 324.545;
+str s = "hi mom!" + "aaaaaaaa";
+
+return p();
