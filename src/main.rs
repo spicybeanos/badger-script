@@ -1,10 +1,10 @@
 use std::env;
 use std::fs;
-
-use tokenizer::tokenize;
-use tokenizer::get_line_from_index;
-use tokenizer::Token;
+pub mod expression_parser;
 pub mod tokenizer;
+use tokenizer::get_line_from_index;
+use tokenizer::tokenize;
+use tokenizer::Token;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -15,15 +15,18 @@ fn main() {
         );
         return;
     }
-    let _inp_file_path:String = args[1].clone();
+    let _inp_file_path: String = args[1].clone();
 
-    let contents = fs::read_to_string(_inp_file_path)
-        .expect("Should have been able to read the file");
+    let contents =
+        fs::read_to_string(_inp_file_path).expect("Should have been able to read the file");
 
-    let (tokens,lines):(Vec<Token>,Vec<usize>) = tokenize(contents);
-    
+    let (tokens, lines): (Vec<Token>, Vec<usize>) = tokenize(contents);
+
     for tok_ in tokens {
-        println!("{:?} at line {}",tok_, get_line_from_index(tok_.index,&lines));
+        println!(
+            "{:?} at line {}",
+            tok_,
+            get_line_from_index(tok_.index, &lines)
+        );
     }
-
 }
