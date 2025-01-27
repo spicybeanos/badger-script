@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 pub mod expression_parser;
+pub mod expression;
 pub mod tokenizer;
 use tokenizer::get_line_from_index;
 use tokenizer::tokenize;
