@@ -36,9 +36,10 @@ pub enum TokenType {
     Lesser,
     LesserEquals,
     Equality,
+    BangEquals,
+
     And,
     Or,
-    BangEquals,
 
     Bang,
     Asign,

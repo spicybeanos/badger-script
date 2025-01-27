@@ -14,10 +14,10 @@ pub struct SymbolTable {
 }
 
 impl SymbolTable {
-    fn get_from_addr(&self, addr: u64, level: u16) -> Result<Value, &'static str> {
+    fn get_from_addr(&self, addr: u64, level: u16) -> Result<Value, String> {
         if level < 128 {
             if addr == 0 {
-                return Result::Err("Null pointer dereference!");
+                return Result::Err("Null pointer dereference!".to_owned());
             }
 
             if self.storage.contains_key(&addr) {
@@ -28,17 +28,17 @@ impl SymbolTable {
                         Entry::Val(vale) => return Result::Ok(vale.clone()),
                         Entry::Pointer(addr2) => self.get_from_addr(*addr2, level + 1),
                     },
-                    _ => return Result::Err("Adress does not exist!"),
+                    _ => return Result::Err("Adress does not exist!".to_owned()),
                 }
             } else {
-                return Result::Err("Adress does not exist!");
+                return Result::Err("Adress does not exist!".to_owned());
             }
         } else {
-            return Result::Err("Nested dereferencing hit hard limit of 128!");
+            return Result::Err("Nested dereferencing hit hard limit of 128!".to_owned());
         }
     }
 
-    fn get_from_symbol(&self, symbol: &str) -> Result<Value, &'static str> {
+    fn get_from_symbol(&self, symbol: &str) -> Result<Value, String> {
         if self.front.contains_key(symbol) {
             let r_addr: Option<&u64> = self.front.get(symbol);
             match r_addr {
@@ -46,11 +46,11 @@ impl SymbolTable {
                     return self.get_from_addr(*addr, 0);
                 }
                 _ => {
-                    return Result::Err("Symbol does not point to anything!");
+                    return Result::Err("Symbol does not point to anything!".to_owned());
                 }
             }
         } else {
-            return Result::Err("Symbol does not exist!");
+            return Result::Err("Symbol does not exist!".to_owned());
         }
     }
 }

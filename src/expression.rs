@@ -18,19 +18,19 @@ pub enum Value {
     Boolean(bool),
 }
 
-pub fn accept(expr: &Expression, table: &SymbolTable) -> Result<Value, &'static str> {
+pub fn accept(expr: &Expression, table: &SymbolTable) -> Result<Value, String> {
     match expr {
         Expression::Literal(val_) => Result::Ok(val_.clone()),
         Expression::Unary(sign, expr) => {
-            let r_: Result<Value, &'static str> = accept(&expr, table);
+            let r_: Result<Value, String> = accept(&expr, table);
             match r_ {
                 Ok(_v_) => unary_signing(&_v_, sign),
                 _ => r_,
             }
         }
         Expression::Binary(left, sign, right) => {
-            let l_r: Result<Value, &'static str> = accept(left, table);
-            let r_r: Result<Value, &'static str> = accept(right, table);
+            let l_r: Result<Value, String> = accept(left, table);
+            let r_r: Result<Value, String> = accept(right, table);
 
             match l_r {
                 Ok(_l_) => match r_r {
@@ -40,11 +40,11 @@ pub fn accept(expr: &Expression, table: &SymbolTable) -> Result<Value, &'static 
                 _ => l_r,
             }
         }
-        Expression::Group(g) => accept(g),
+        Expression::Group(g) => accept(g, table),
     }
 }
 
-fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Value, &'static str> {
+fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Value, String> {
     match operator.ttype {
         TokenType::Plus => match left {
             Value::Number(ln) => match right {
@@ -54,7 +54,12 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                 Value::StringVal(rs) => {
                     return Result::Ok(Value::StringVal(ln.to_string() + rs));
                 }
-                _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string())),
+                _ => {
+                    return Result::Err(
+                        &("operation is not defined! at ".to_string()
+                            + &operator.index.to_string()),
+                    )
+                }
             },
             Value::StringVal(ls) => match right {
                 Value::Number(rn) => {
@@ -67,50 +72,107 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                     return Result::Ok(Value::StringVal(ls.to_owned() + &rb.to_string()));
                 }
             },
-            _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string()))
+            _ => {
+                return Result::Err(
+                    &("operation is not defined! at ".to_string() + &operator.index.to_string()),
+                )
+            }
         },
         TokenType::Minus => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln - rn));
                 }
-                _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string())),
+                _ => {
+                    return Result::Err(
+                        &("operation is not defined! at ".to_string()
+                            + &operator.index.to_string()),
+                    )
+                }
             },
-            _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string()))
+            _ => {
+                return Result::Err(
+                    &("operation is not defined! at ".to_string() + &operator.index.to_string()),
+                )
+            }
         },
         TokenType::Star => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln * rn));
                 }
-                _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string())),
+                _ => return opp_undef(operator),
             },
-            _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string()))
+            _ => return opp_undef(operator),
         },
         TokenType::Slash => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln / rn));
                 }
-                _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string())),
+                _ => return opp_undef(operator),
             },
-            _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string()))
+            _ => return opp_undef(operator),
         },
         TokenType::Mod => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln % rn));
                 }
-                _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string())),
+                _ => return opp_undef(operator),
             },
-            _ => return Result::Err(&("operation is not defined! at ".to_string() + &operator.index.to_string()))
+            _ => return opp_undef(operator),
         },
 
-        
+        TokenType::And => match left {
+            Value::Boolean(lb) => match right {
+                Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb && *rb)),
+                _ => opp_undef(operator),
+            },
+            _ => opp_undef(operator),
+        },
+        TokenType::Or => match left {
+            Value::Boolean(lb) => match right {
+                Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb || *rb)),
+                _ => opp_undef(operator),
+            },
+            _ => opp_undef(operator),
+        },
+
+        TokenType::Equality => match left {
+            Value::Boolean(lb) => match right {
+                Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb == *rb)),
+                _ => opp_undef(operator),
+            },
+            Value::Number(ln) => match right {
+                Value::Number(rn) => Result::Ok(Value::Boolean(*ln == *rn)),
+                _ => opp_undef(operator),
+            },
+            Value::StringVal(ls) => match right {
+                Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls == *rs)),
+                _ => opp_undef(operator),
+            },
+        },
+        TokenType::BangEquals => match left {
+            Value::Boolean(lb) => match right {
+                Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb != *rb)),
+                _ => opp_undef(operator),
+            },
+            Value::Number(ln) => match right {
+                Value::Number(rn) => Result::Ok(Value::Boolean(*ln != *rn)),
+                _ => opp_undef(operator),
+            },
+            Value::StringVal(ls) => match right {
+                Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls != *rs)),
+                _ => opp_undef(operator),
+            },
+        },
     }
 }
-
-fn unary_signing(val: &Value, sign: &Token) -> Result<Value, &'static str> {
+fn opp_undef(operator: &Token) -> Result<Value, String> {
+    return Result::Err("operation is not defined! at ".to_string() + &operator.index.to_string());
+}
+fn unary_signing(val: &Value, sign: &Token) -> Result<Value, String> {
     match sign.ttype {
         TokenType::Bang => match val {
             Value::Boolean(b) => Result::Ok(Value::Boolean(!b)),
@@ -119,8 +181,8 @@ fn unary_signing(val: &Value, sign: &Token) -> Result<Value, &'static str> {
         },
         TokenType::Minus => match val {
             Value::Number(n) => Result::Ok(Value::Number(-n)),
-            _ => Result::Err("Cannot use '-' on anything other than a 'num'"),
+            _ => Result::Err("Cannot use '-' on anything other than a 'num'".to_owned()),
         },
-        _ => Result::Err("Cannot use this operator in a unary expression!"),
+        _ => Result::Err("Cannot use this operator in a unary expression!".to_owned()),
     }
 }
