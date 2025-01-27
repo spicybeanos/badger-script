@@ -3,6 +3,7 @@ use std::fs;
 pub mod expression_parser;
 pub mod expression;
 pub mod tokenizer;
+pub mod symbol_table;
 use tokenizer::get_line_from_index;
 use tokenizer::tokenize;
 use tokenizer::Token;

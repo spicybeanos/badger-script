@@ -30,16 +30,18 @@ pub enum TokenType {
     Star,
     Slash,
     Mod,
+
     Greater,
     GreaterEquals,
     Lesser,
     LesserEquals,
-    Asign,
     Equality,
     And,
     Or,
-    Bang,
     BangEquals,
+
+    Bang,
+    Asign,
 }
 
 #[derive(Debug)]
@@ -261,7 +263,7 @@ pub fn tokenize(src: String) -> (Vec<Token>, Vec<usize>) {
                 let value = parse_string_literal(&s);
 
                 tok.push(Token {
-                    index: start-1,
+                    index: start - 1,
                     ttype: TokenType::StringLiteral(value),
                 });
             }
