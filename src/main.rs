@@ -4,6 +4,9 @@ pub mod expression_parser;
 pub mod expression;
 pub mod tokenizer;
 pub mod symbol_table;
+use expression::accept;
+use expression::Value;
+use symbol_table::SymbolTable;
 use tokenizer::get_line_from_index;
 use tokenizer::tokenize;
 use tokenizer::Token;
@@ -24,11 +27,30 @@ fn main() {
 
     let (tokens, lines): (Vec<Token>, Vec<usize>) = tokenize(contents);
 
-    for tok_ in tokens {
+    for tok_ in &tokens {
         println!(
             "{:?} at line {}",
             tok_,
             get_line_from_index(tok_.index, &lines)
         );
+    }
+    let r_ex = expression_parser::parse(&tokens);
+    let table:SymbolTable = SymbolTable::new();
+
+    match r_ex {
+        Result::Ok(expr) => {
+            let res = accept(&expr, &table);
+            match res {
+                Ok(amt) => {
+                    match amt {
+                        Value::Boolean(b) => println!("boolean = {}",b),
+                        Value::Number(n) => println!("number = {}",n),
+                        Value::StringVal(s) => println!("string = {}",s)
+                    }
+                }
+                Err(e1) => println!("Error! {}",e1)
+            }
+        }
+        Err(e2) => println!("Error! {}",e2)
     }
 }

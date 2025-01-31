@@ -20,6 +20,7 @@ pub enum Value {
 
 pub fn accept(expr: &Expression, table: &SymbolTable) -> Result<Value, String> {
     match expr {
+        Expression::Symbol(sym) => table.get_from_symbol(sym),
         Expression::Literal(val_) => Result::Ok(val_.clone()),
         Expression::Unary(sign, expr) => {
             let r_: Result<Value, String> = accept(&expr, table);
@@ -56,8 +57,8 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                 }
                 _ => {
                     return Result::Err(
-                        &("operation is not defined! at ".to_string()
-                            + &operator.index.to_string()),
+                        "operation is not defined! at ".to_string()
+                            + &operator.index.to_string(),
                     )
                 }
             },
@@ -74,7 +75,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
             },
             _ => {
                 return Result::Err(
-                    &("operation is not defined! at ".to_string() + &operator.index.to_string()),
+                    ("operation is not defined! at ".to_string() + &operator.index.to_string()),
                 )
             }
         },
@@ -85,14 +86,14 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                 }
                 _ => {
                     return Result::Err(
-                        &("operation is not defined! at ".to_string()
+                        ("operation is not defined! at ".to_string()
                             + &operator.index.to_string()),
                     )
                 }
             },
             _ => {
                 return Result::Err(
-                    &("operation is not defined! at ".to_string() + &operator.index.to_string()),
+                    ("operation is not defined! at ".to_string() + &operator.index.to_string()),
                 )
             }
         },
@@ -167,6 +168,53 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                 _ => opp_undef(operator),
             },
         },
+
+        TokenType::Greater => match left {
+            Value::Boolean(lb) => opp_undef(operator),
+            Value::Number(ln) => match right {
+                Value::Number(rn) => Result::Ok(Value::Boolean(*ln > *rn)),
+                _ => opp_undef(operator),
+            },
+            Value::StringVal(ls) => match right {
+                Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls > *rs)),
+                _ => opp_undef(operator),
+            },
+        },
+        TokenType::GreaterEquals => match left {
+            Value::Boolean(lb) => opp_undef(operator),
+            Value::Number(ln) => match right {
+                Value::Number(rn) => Result::Ok(Value::Boolean(*ln >= *rn)),
+                _ => opp_undef(operator),
+            },
+            Value::StringVal(ls) => match right {
+                Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls >= *rs)),
+                _ => opp_undef(operator),
+            },
+        },
+        TokenType::Lesser => match left {
+            Value::Boolean(lb) => opp_undef(operator),
+            Value::Number(ln) => match right {
+                Value::Number(rn) => Result::Ok(Value::Boolean(*ln < *rn)),
+                _ => opp_undef(operator),
+            },
+            Value::StringVal(ls) => match right {
+                Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls < *rs)),
+                _ => opp_undef(operator),
+            },
+        },
+        TokenType::LesserEquals => match left {
+            Value::Boolean(lb) => opp_undef(operator),
+            Value::Number(ln) => match right {
+                Value::Number(rn) => Result::Ok(Value::Boolean(*ln <= *rn)),
+                _ => opp_undef(operator),
+            },
+            Value::StringVal(ls) => match right {
+                Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls <= *rs)),
+                _ => opp_undef(operator),
+            },
+        },
+
+        _ => opp_undef(operator),
     }
 }
 fn opp_undef(operator: &Token) -> Result<Value, String> {

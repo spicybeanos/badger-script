@@ -1,6 +1,8 @@
 use std::fmt;
 
 #[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
 pub enum TokenType {
     Eof,
     EoStmt,
@@ -46,6 +48,9 @@ pub enum TokenType {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
+#[derive(Copy)]
 pub enum KeyWords {
     Null,
     True,
@@ -70,6 +75,8 @@ impl fmt::Debug for Token {
         write!(f, "[{:?}]{:?} ", self.index, &self.ttype)
     }
 }
+
+#[derive(Clone)]
 pub struct Token {
     pub index: usize,
     pub ttype: TokenType,

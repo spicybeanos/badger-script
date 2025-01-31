@@ -8,13 +8,31 @@ pub enum Entry {
 }
 
 pub struct SymbolTable {
-    global_counter: usize,
+    global_counter: u64,
     storage: HashMap<u64, Entry>,
     front: HashMap<String, u64>,
 }
 
 impl SymbolTable {
-    fn get_from_addr(&self, addr: u64, level: u16) -> Result<Value, String> {
+    pub fn add_symbol(&mut self,name:&str,value:Value) -> Result<u64,String> {
+        
+        if self.front.contains_key(name) {
+            return  Err("Identifier already decleared!".to_owned());
+        }
+
+        self.storage.insert(self.global_counter,Entry::Val(value));
+        self.front.insert(name.to_owned(),self.global_counter);
+        self.global_counter = self.global_counter + 1;
+
+        return Ok(self.global_counter-1);
+    }
+    pub fn new() -> SymbolTable{
+        SymbolTable { global_counter: 1000,
+            storage: HashMap::<u64,Entry>::new(),
+            front: HashMap::<String,u64>::new()
+        }
+    }
+    pub fn get_from_addr(&self, addr: u64, level: u16) -> Result<Value, String> {
         if level < 128 {
             if addr == 0 {
                 return Result::Err("Null pointer dereference!".to_owned());
@@ -38,7 +56,7 @@ impl SymbolTable {
         }
     }
 
-    fn get_from_symbol(&self, symbol: &str) -> Result<Value, String> {
+    pub fn get_from_symbol(&self, symbol: &str) -> Result<Value, String> {
         if self.front.contains_key(symbol) {
             let r_addr: Option<&u64> = self.front.get(symbol);
             match r_addr {
