@@ -12,7 +12,6 @@ pub enum TokenType {
     BooleanLiteral(bool),
 
     Identifier(String),
-    Keyword(KeyWords),
 
     OpenParent,
     CloseParent,
@@ -45,13 +44,7 @@ pub enum TokenType {
 
     Bang,
     Asign,
-}
 
-#[derive(Debug)]
-#[derive(PartialEq)]
-#[derive(Clone)]
-#[derive(Copy)]
-pub enum KeyWords {
     Null,
     True,
     False,
@@ -69,6 +62,7 @@ pub enum KeyWords {
     Bool,
     IdentifierNotKeyword,
 }
+
 
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -319,7 +313,7 @@ pub fn tokenize(src: String) -> (Vec<Token>, Vec<usize>) {
                     if is_keyword(&word) {
                         tok.push(Token {
                             index: start,
-                            ttype: TokenType::Keyword(get_keyword(&word)),
+                            ttype: get_keyword(&word),
                         });
                     } else {
                         tok.push(Token {
@@ -352,24 +346,24 @@ pub fn is_keyword(word: &str) -> bool {
     }
 }
 
-pub fn get_keyword(word: &str) -> KeyWords {
+pub fn get_keyword(word: &str) -> TokenType {
     match word {
-        "true" => KeyWords::True,
-        "false" => KeyWords::False,
-        "if" => KeyWords::If,
-        "else" => KeyWords::Else,
-        "fxn" => KeyWords::Fxn,
-        "while" => KeyWords::While,
-        "break" => KeyWords::Break,
-        "continue" => KeyWords::Continue,
-        "import" => KeyWords::Import,
-        "return" => KeyWords::Return,
-        "num" => KeyWords::Num,
-        "str" => KeyWords::Str,
-        "bool" => KeyWords::Bool,
-        "null" => KeyWords::Null,
-        "export" => KeyWords::Export,
-        _ => KeyWords::IdentifierNotKeyword,
+        "true" => TokenType::True,
+        "false" => TokenType::False,
+        "if" => TokenType::If,
+        "else" => TokenType::Else,
+        "fxn" => TokenType::Fxn,
+        "while" => TokenType::While,
+        "break" => TokenType::Break,
+        "continue" => TokenType::Continue,
+        "import" => TokenType::Import,
+        "return" => TokenType::Return,
+        "num" => TokenType::Num,
+        "str" => TokenType::Str,
+        "bool" => TokenType::Bool,
+        "null" => TokenType::Null,
+        "export" => TokenType::Export,
+        _ => TokenType::IdentifierNotKeyword,
     }
 }
 

@@ -6,6 +6,7 @@ pub mod tokenizer;
 pub mod symbol_table;
 use expression::accept;
 use expression::Value;
+use expression_parser::ExpressionParser;
 use symbol_table::SymbolTable;
 use tokenizer::get_line_from_index;
 use tokenizer::tokenize;
@@ -34,7 +35,7 @@ fn main() {
             get_line_from_index(tok_.index, &lines)
         );
     }
-    let r_ex = expression_parser::parse(&tokens);
+    let parser: ExpressionParser<'_> = ExpressionParser::new(&tokens,&lines);
     let table:SymbolTable = SymbolTable::new();
 
     match r_ex {
