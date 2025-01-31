@@ -1,7 +1,5 @@
-use crate::{
-    symbol_table::SymbolTable,
-    tokenizer::{Token, TokenType},
-};
+use crate::{symbol_table::SymbolTable, tokenizer::{Token, TokenType}};
+use std::fmt;
 
 pub enum Expression {
     Symbol(String),
@@ -11,6 +9,19 @@ pub enum Expression {
     Group(Box<Expression>),
 }
 
+impl fmt::Debug for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Expression::Literal(v) => write!(f, "{:?} ",v),
+            Expression::Unary(sgn,exp ) => write!(f, "{:?}{:?} ", sgn, exp),
+            Expression::Symbol(s) =>write!(f, "{:?} ", s),
+            Expression::Group(ex) => write!(f, "({:?}) ", ex),
+            Expression::Binary(l, s,r ) => write!(f, "{:?} {:?} {:?} ", l,s,r)
+        }
+    }
+}
+
+#[derive(Debug)]
 #[derive(Clone)]
 pub enum Value {
     Number(f64),

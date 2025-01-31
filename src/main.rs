@@ -39,6 +39,7 @@ fn main() {
 
     match r_ex {
         Result::Ok(expr) => {
+            println!("tree:{:?}",expr);
             let res = accept(&expr, &table);
             match res {
                 Ok(amt) => {
