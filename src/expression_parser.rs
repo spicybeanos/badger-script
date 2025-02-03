@@ -18,10 +18,66 @@ impl<'a> ExpressionParser<'a> {
         }
     }
 
+    pub fn expression(&mut self) -> Result<Expression,String>{
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Result<Expression,String> {
+        let mut expr:Expression = self.comparison()?;
+        while self.match_type(&[TokenType::Equality,TokenType::BangEquals]) {
+            let op:Token = self.previous().clone();
+            let right:Expression = self.comparison()?;
+            let temp = expr;
+            expr = Expression::Binary(Box::new(temp), op, Box::new(right));
+        }
+
+        return Ok(expr);
+    }
+
+    fn comparison(&mut self) -> Result<Expression,String> {
+        let mut expr:Expression = self.term()?;
+        while self.match_type(&[TokenType::Greater,TokenType::GreaterEquals,TokenType::Lesser,TokenType::LesserEquals]) {
+            let op:Token = self.previous().clone();
+            let right:Expression = self.term()?;
+            let temp = expr;
+            expr = Expression::Binary(Box::new(temp), op, Box::new(right));
+        }
+
+        return Ok(expr);
+    }
+
+    fn term(&mut self) -> Result<Expression,String> {
+        let mut expr:Expression = self.factor()?;
+        while self.match_type(&[TokenType::Plus,TokenType::Minus]) {
+            let op:Token = self.previous().clone();
+            let right:Expression = self.factor()?;
+            let temp = expr;
+            expr = Expression::Binary(Box::new(temp), op, Box::new(right));
+        }
+
+        return Ok(expr);
+    }
+
+    fn factor(&mut self) -> Result<Expression,String> {
+        let mut expr:Expression = self.unary()?;
+        while self.match_type(&[TokenType::Slash,TokenType::Star,TokenType::Mod]) {
+            let op:Token = self.previous().clone();
+            let right:Expression = self.unary()?;
+            let temp = expr;
+            expr = Expression::Binary(Box::new(temp), op, Box::new(right));
+        }
+
+        return Ok(expr);
+    }
+
     fn unary(&mut self) -> Result<Expression, String> {
         if self.match_type(&[TokenType::Bang,TokenType::Minus]) {
-            
+            let opr:Token = self.previous().clone();
+            let right:Expression = self.unary()?;
+            return  Ok(Expression::Unary(opr,Box::new(right)));
         }
+
+        return self.primary();
     }
 
     fn primary(&mut self) -> Result<Expression, String> {
@@ -47,9 +103,9 @@ impl<'a> ExpressionParser<'a> {
         }
 
         if self.match_type(&[TokenType::OpenParent]) {
-            let expr: Expression = expression()?;
-            self.consume(&TokenType::CloseParent, "Expected ')' after expression");
-            return Ok(Expression::Group(expr));
+            let expr: Expression = self.expression()?;
+            self.consume(&TokenType::CloseParent, "Expected ')' after expression")?;
+            return Ok(Expression::Group(Box::new(expr)));
         }
 
         return self.error_ex(self.peek(), "Expected expression");

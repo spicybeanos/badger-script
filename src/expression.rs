@@ -86,7 +86,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
             },
             _ => {
                 return Result::Err(
-                    ("operation is not defined! at ".to_string() + &operator.index.to_string()),
+                    "operation is not defined! at ".to_string() + &operator.index.to_string(),
                 )
             }
         },
@@ -97,14 +97,14 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                 }
                 _ => {
                     return Result::Err(
-                        ("operation is not defined! at ".to_string()
-                            + &operator.index.to_string()),
+                        "operation is not defined! at ".to_string()
+                            + &operator.index.to_string(),
                     )
                 }
             },
             _ => {
                 return Result::Err(
-                    ("operation is not defined! at ".to_string() + &operator.index.to_string()),
+                    "operation is not defined! at ".to_string() + &operator.index.to_string(),
                 )
             }
         },
@@ -181,7 +181,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
         },
 
         TokenType::Greater => match left {
-            Value::Boolean(lb) => opp_undef(operator),
+            Value::Boolean(_lb) => opp_undef(operator),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln > *rn)),
                 _ => opp_undef(operator),
@@ -192,7 +192,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
             },
         },
         TokenType::GreaterEquals => match left {
-            Value::Boolean(lb) => opp_undef(operator),
+            Value::Boolean(_lb) => opp_undef(operator),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln >= *rn)),
                 _ => opp_undef(operator),
@@ -203,7 +203,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
             },
         },
         TokenType::Lesser => match left {
-            Value::Boolean(lb) => opp_undef(operator),
+            Value::Boolean(_lb) => opp_undef(operator),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln < *rn)),
                 _ => opp_undef(operator),
@@ -214,7 +214,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
             },
         },
         TokenType::LesserEquals => match left {
-            Value::Boolean(lb) => opp_undef(operator),
+            Value::Boolean(_lb) => opp_undef(operator),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln <= *rn)),
                 _ => opp_undef(operator),
