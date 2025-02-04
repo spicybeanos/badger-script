@@ -37,7 +37,7 @@ fn main() {
     }
     let mut parser: ExpressionParser<'_> = ExpressionParser::new(&tokens,&lines);
     let table:SymbolTable = SymbolTable::new();
-    let r_ex = parser.expression();
+    let r_ex = parser.parse();
     match r_ex {
         Result::Ok(expr) => {
             println!("tree:{:?}",expr);

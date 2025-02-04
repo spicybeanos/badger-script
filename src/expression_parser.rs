@@ -18,10 +18,24 @@ impl<'a> ExpressionParser<'a> {
         }
     }
 
-    pub fn expression(&mut self) -> Result<Expression,String>{
-        self.equality()
+    pub fn parse(&mut self) -> Result<Expression,String>{
+        self.expression()
     }
 
+    pub fn expression(&mut self) -> Result<Expression,String>{
+        self.boolean_logic()
+    }
+    fn boolean_logic(&mut self) -> Result<Expression,String> {
+        let mut expr:Expression = self.equality()?;
+        while self.match_type(&[TokenType::And,TokenType::Or]) {
+            let op:Token = self.previous().clone();
+            let right:Expression = self.equality()?;
+            let temp = expr;
+            expr = Expression::Binary(Box::new(temp), op, Box::new(right));
+        }
+
+        return Ok(expr);
+    }
     fn equality(&mut self) -> Result<Expression,String> {
         let mut expr:Expression = self.comparison()?;
         while self.match_type(&[TokenType::Equality,TokenType::BangEquals]) {
