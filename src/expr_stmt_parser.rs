@@ -1,58 +1,77 @@
 use crate::{
     expression::{Expression, Value},
+    statement::Statement,
     tokenizer::{Token, TokenType},
 };
 
-pub struct ExpressionParser<'a> {
+pub struct ExprStmtParser<'a> {
     current: usize,
     lines: &'a Vec<usize>,
     tokens: &'a Vec<Token>,
 }
 
-impl<'a> ExpressionParser<'a> {
-    pub fn new(tokens_: &'a Vec<Token>, lines_: &'a Vec<usize>) -> ExpressionParser<'a> {
-        ExpressionParser {
+impl<'a> ExprStmtParser<'a> {
+    pub fn new(
+        tokens_: &'a Vec<Token>,
+        lines_: &'a Vec<usize>,
+        start: usize,
+    ) -> ExprStmtParser<'a> {
+        ExprStmtParser {
             tokens: tokens_,
-            current: 0,
+            current: start,
             lines: lines_,
         }
     }
 
-    pub fn parse(&mut self) -> Result<Expression,String>{
+    pub fn parse_statement(&mut self) -> Result<Vec<Statement>, String> {
+        let mut stmt: Vec<Statement> = Vec::<Statement>::new();
+        while !self.is_at_end() {
+            stmt.push(self.statement()?);
+        }
+
+        return Ok(stmt);
+    }
+
+    fn statement(&mut self) -> Result<Statement, String> {
+        if self.match_tokentype(&[TokenType::Return]) {
+            return self.return_statement();
+        }
+
+        return self.expr_statement();
+    }
+    fn return_statement(&mut self) -> Result<Statement,String>{
+        let value = self.expression()?;
+        self.consume(&TokenType::EoStmt, "Expected ';' after value.")?;
+        return Ok(Statement::Return(value));
+    }
+    fn expr_statement(&mut self) -> Result<Statement,String>{
+        let value = self.expression()?;
+        self.consume(&TokenType::EoStmt, "Expected ';' after value.")?;
+        return Ok(Statement::Expr(value));
+    }
+
+    pub fn parse_expression(&mut self) -> Result<Expression, String> {
         self.expression()
     }
-
-    pub fn expression(&mut self) -> Result<Expression,String>{
+    pub fn expression(&mut self) -> Result<Expression, String> {
         self.boolean_logic()
     }
-    fn boolean_logic(&mut self) -> Result<Expression,String> {
-        let mut expr:Expression = self.equality()?;
-        while self.match_type(&[TokenType::And,TokenType::Or]) {
-            let op:Token = self.previous().clone();
-            let right:Expression = self.equality()?;
+    fn boolean_logic(&mut self) -> Result<Expression, String> {
+        let mut expr: Expression = self.equality()?;
+        while self.match_tokentype(&[TokenType::And, TokenType::Or]) {
+            let op: Token = self.previous().clone();
+            let right: Expression = self.equality()?;
             let temp = expr;
             expr = Expression::Binary(Box::new(temp), op, Box::new(right));
         }
 
         return Ok(expr);
     }
-    fn equality(&mut self) -> Result<Expression,String> {
-        let mut expr:Expression = self.comparison()?;
-        while self.match_type(&[TokenType::Equality,TokenType::BangEquals]) {
-            let op:Token = self.previous().clone();
-            let right:Expression = self.comparison()?;
-            let temp = expr;
-            expr = Expression::Binary(Box::new(temp), op, Box::new(right));
-        }
-
-        return Ok(expr);
-    }
-
-    fn comparison(&mut self) -> Result<Expression,String> {
-        let mut expr:Expression = self.term()?;
-        while self.match_type(&[TokenType::Greater,TokenType::GreaterEquals,TokenType::Lesser,TokenType::LesserEquals]) {
-            let op:Token = self.previous().clone();
-            let right:Expression = self.term()?;
+    fn equality(&mut self) -> Result<Expression, String> {
+        let mut expr: Expression = self.comparison()?;
+        while self.match_tokentype(&[TokenType::Equality, TokenType::BangEquals]) {
+            let op: Token = self.previous().clone();
+            let right: Expression = self.comparison()?;
             let temp = expr;
             expr = Expression::Binary(Box::new(temp), op, Box::new(right));
         }
@@ -60,11 +79,16 @@ impl<'a> ExpressionParser<'a> {
         return Ok(expr);
     }
 
-    fn term(&mut self) -> Result<Expression,String> {
-        let mut expr:Expression = self.factor()?;
-        while self.match_type(&[TokenType::Plus,TokenType::Minus]) {
-            let op:Token = self.previous().clone();
-            let right:Expression = self.factor()?;
+    fn comparison(&mut self) -> Result<Expression, String> {
+        let mut expr: Expression = self.term()?;
+        while self.match_tokentype(&[
+            TokenType::Greater,
+            TokenType::GreaterEquals,
+            TokenType::Lesser,
+            TokenType::LesserEquals,
+        ]) {
+            let op: Token = self.previous().clone();
+            let right: Expression = self.term()?;
             let temp = expr;
             expr = Expression::Binary(Box::new(temp), op, Box::new(right));
         }
@@ -72,11 +96,23 @@ impl<'a> ExpressionParser<'a> {
         return Ok(expr);
     }
 
-    fn factor(&mut self) -> Result<Expression,String> {
-        let mut expr:Expression = self.unary()?;
-        while self.match_type(&[TokenType::Slash,TokenType::Star,TokenType::Mod]) {
-            let op:Token = self.previous().clone();
-            let right:Expression = self.unary()?;
+    fn term(&mut self) -> Result<Expression, String> {
+        let mut expr: Expression = self.factor()?;
+        while self.match_tokentype(&[TokenType::Plus, TokenType::Minus]) {
+            let op: Token = self.previous().clone();
+            let right: Expression = self.factor()?;
+            let temp = expr;
+            expr = Expression::Binary(Box::new(temp), op, Box::new(right));
+        }
+
+        return Ok(expr);
+    }
+
+    fn factor(&mut self) -> Result<Expression, String> {
+        let mut expr: Expression = self.unary()?;
+        while self.match_tokentype(&[TokenType::Slash, TokenType::Star, TokenType::Mod]) {
+            let op: Token = self.previous().clone();
+            let right: Expression = self.unary()?;
             let temp = expr;
             expr = Expression::Binary(Box::new(temp), op, Box::new(right));
         }
@@ -85,20 +121,20 @@ impl<'a> ExpressionParser<'a> {
     }
 
     fn unary(&mut self) -> Result<Expression, String> {
-        if self.match_type(&[TokenType::Bang,TokenType::Minus]) {
-            let opr:Token = self.previous().clone();
-            let right:Expression = self.unary()?;
-            return  Ok(Expression::Unary(opr,Box::new(right)));
+        if self.match_tokentype(&[TokenType::Bang, TokenType::Minus]) {
+            let opr: Token = self.previous().clone();
+            let right: Expression = self.unary()?;
+            return Ok(Expression::Unary(opr, Box::new(right)));
         }
 
         return self.primary();
     }
 
     fn primary(&mut self) -> Result<Expression, String> {
-        if self.match_type(&[TokenType::False]) {
+        if self.match_tokentype(&[TokenType::False]) {
             return Ok(Expression::Literal(Value::Boolean(false)));
         }
-        if self.match_type(&[TokenType::True]) {
+        if self.match_tokentype(&[TokenType::True]) {
             return Ok(Expression::Literal(Value::Boolean(true)));
         }
 
@@ -116,7 +152,7 @@ impl<'a> ExpressionParser<'a> {
             return Ok(Expression::Symbol(string_value));
         }
 
-        if self.match_type(&[TokenType::OpenParent]) {
+        if self.match_tokentype(&[TokenType::OpenParent]) {
             let expr: Expression = self.expression()?;
             self.consume(&TokenType::CloseParent, "Expected ')' after expression")?;
             return Ok(Expression::Group(Box::new(expr)));
@@ -168,7 +204,7 @@ impl<'a> ExpressionParser<'a> {
         }
         return self.peek().ttype == *ttype;
     }
-    fn match_type(&mut self, ttypes: &[TokenType]) -> bool {
+    fn match_tokentype(&mut self, ttypes: &[TokenType]) -> bool {
         for tt in ttypes {
             if self.check(tt) {
                 self.advance();

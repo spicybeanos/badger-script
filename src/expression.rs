@@ -1,6 +1,11 @@
-use crate::{symbol_table::SymbolTable, tokenizer::{Token, TokenType}};
+use crate::{
+    symbol_table::SymbolTable,
+    tokenizer::{Token, TokenType},
+};
 use std::fmt;
 
+
+#[derive(Clone)]
 pub enum Expression {
     Symbol(String),
     Literal(Value),
@@ -12,47 +17,48 @@ pub enum Expression {
 impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expression::Literal(v) => write!(f, "{:?} ",v),
-            Expression::Unary(sgn,exp ) => write!(f, "{:?}{:?} ", sgn, exp),
-            Expression::Symbol(s) =>write!(f, "{:?} ", s),
+            Expression::Literal(v) => write!(f, "{:?} ", v),
+            Expression::Unary(sgn, exp) => write!(f, "{:?}{:?} ", sgn, exp),
+            Expression::Symbol(s) => write!(f, "{:?} ", s),
             Expression::Group(ex) => write!(f, "({:?}) ", ex),
-            Expression::Binary(l, s,r ) => write!(f, "{:?} {:?} {:?} ", l,s,r)
+            Expression::Binary(l, s, r) => write!(f, "{:?} {:?} {:?} ", l, s, r),
         }
     }
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Number(f64),
     StringVal(String),
     Boolean(bool),
 }
 
-pub fn accept(expr: &Expression, table: &SymbolTable) -> Result<Value, String> {
-    match expr {
-        Expression::Symbol(sym) => table.get_from_symbol(sym),
-        Expression::Literal(val_) => Result::Ok(val_.clone()),
-        Expression::Unary(sign, expr) => {
-            let r_: Result<Value, String> = accept(&expr, table);
-            match r_ {
-                Ok(_v_) => unary_signing(&_v_, sign),
-                _ => r_,
+impl Expression {
+    pub fn evaluate(&self, table: &SymbolTable) -> Result<Value, String> {
+        match self {
+            Expression::Symbol(sym) => table.get_from_symbol(&sym),
+            Expression::Literal(val_) => Result::Ok(val_.clone()),
+            Expression::Unary(sign, expr) => {
+                let r_: Result<Value, String> = expr.evaluate(table);
+                match r_ {
+                    Ok(_v_) => unary_signing(&_v_, &sign),
+                    _ => r_,
+                }
             }
-        }
-        Expression::Binary(left, sign, right) => {
-            let l_r: Result<Value, String> = accept(left, table);
-            let r_r: Result<Value, String> = accept(right, table);
+            Expression::Binary(left, sign, right) => {
+                let l_r: Result<Value, String> = left.evaluate(table);
+                let r_r: Result<Value, String> = right.evaluate(table);
 
-            match l_r {
-                Ok(_l_) => match r_r {
-                    Ok(_r_) => binary_operation(&_l_, &sign, &_r_),
-                    _ => r_r,
-                },
-                _ => l_r,
+                match l_r {
+                    Ok(_l_) => match r_r {
+                        Ok(_r_) => binary_operation(&_l_, &sign, &_r_),
+                        _ => r_r,
+                    },
+                    _ => l_r,
+                }
             }
+            Expression::Group(g) => g.evaluate(table),
         }
-        Expression::Group(g) => accept(g, table),
     }
 }
 
@@ -68,8 +74,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                 }
                 _ => {
                     return Result::Err(
-                        "operation is not defined! at ".to_string()
-                            + &operator.index.to_string(),
+                        "operation is not defined! at ".to_string() + &operator.index.to_string(),
                     )
                 }
             },
@@ -97,8 +102,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
                 }
                 _ => {
                     return Result::Err(
-                        "operation is not defined! at ".to_string()
-                            + &operator.index.to_string(),
+                        "operation is not defined! at ".to_string() + &operator.index.to_string(),
                     )
                 }
             },
@@ -231,13 +235,16 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value) -> Result<Val
 fn opp_undef(operator: &Token) -> Result<Value, String> {
     return Result::Err("operation is not defined! at ".to_string() + &operator.index.to_string());
 }
+fn boolify(val: &Value) -> bool {
+    match val {
+        Value::Boolean(b) => *b,
+        Value::Number(n) => *n > 0.0,
+        Value::StringVal(s) => !s.is_empty()
+    }
+}
 fn unary_signing(val: &Value, sign: &Token) -> Result<Value, String> {
     match sign.ttype {
-        TokenType::Bang => match val {
-            Value::Boolean(b) => Result::Ok(Value::Boolean(!b)),
-            Value::Number(n) => Result::Ok(Value::Boolean(*n != 0.0)),
-            Value::StringVal(s) => Result::Ok(Value::Boolean(!s.is_empty())),
-        },
+        TokenType::Bang => Ok(Value::Boolean(!boolify(val))),
         TokenType::Minus => match val {
             Value::Number(n) => Result::Ok(Value::Number(-n)),
             _ => Result::Err("Cannot use '-' on anything other than a 'num'".to_owned()),
