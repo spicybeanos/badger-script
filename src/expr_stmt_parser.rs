@@ -132,24 +132,24 @@ impl<'a> ExprStmtParser<'a> {
 
     fn primary(&mut self) -> Result<Expression, String> {
         if self.match_tokentype(&[TokenType::False]) {
-            return Ok(Expression::Literal(Value::Boolean(false)));
+            return Ok(Expression::Literal(Value::Boolean(false),self.current-1));
         }
         if self.match_tokentype(&[TokenType::True]) {
-            return Ok(Expression::Literal(Value::Boolean(true)));
+            return Ok(Expression::Literal(Value::Boolean(true),self.current-1));
         }
 
         if let Some(num) = self.match_number_literal() {
-            return Ok(Expression::Literal(Value::Number(num)));
+            return Ok(Expression::Literal(Value::Number(num),self.current-1));
         }
         if let Some(b) = self.match_boolean_literal() {
-            return Ok(Expression::Literal(Value::Boolean(b)));
+            return Ok(Expression::Literal(Value::Boolean(b),self.current-1));
         }
         if let Some(string_value) = self.match_string_literal() {
-            return Ok(Expression::Literal(Value::StringVal(string_value)));
+            return Ok(Expression::Literal(Value::StringVal(string_value),self.current-1));
         }
 
         if let Some(string_value) = self.match_symbol() {
-            return Ok(Expression::Symbol(string_value));
+            return Ok(Expression::Symbol(string_value,self.current-1));
         }
 
         if self.match_tokentype(&[TokenType::OpenParent]) {

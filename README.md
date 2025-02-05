@@ -1,12 +1,20 @@
-A simple, functional, strongly typed programming language built using only 15 keywords
-
 - Delimitators:
 `() {} [] : ; . , + - * / % > = < " ' ? @`
 - For comment use `#`
 - Operators:
 `+ - * / % > < == >= <= & | ! != ? @`
-- For reference we use `@`. It's basically a pointer
-- For checking if a reference is valid or not, we use `?` before the reference, if it is valid, it returns `true` else it returns `false`.
+- For reference we use `@`. It's basically a pointer. usage: ```
+```
+num x = 0;
+do_smth(@x);
+fxn do_smth(num @ptr) { ptr = ptr + 1; }
+```
+- For checking if a reference is valid or not, we use `?` before the reference, if it is valid, it returns `true` else it returns `false`. usage : ```
+``` 
+if (?ptr[0]) {
+	ptr[0] = ptr[0] + 1 #auto deref
+}
+```
 - Keywords:
 `true`, `false` , `if` , `else` , `fxn` , `while` , `break` , `continue` , `import`, `return` , `num` , `str` , `bool` , `null` , `export`
 

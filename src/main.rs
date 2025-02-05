@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 pub mod expr_stmt_parser;
+pub mod badger_debug;
 pub mod expression;
 pub mod tokenizer;
 pub mod symbol_table;
@@ -46,12 +47,15 @@ fn main() {
     match rst {
         Ok(s) => {
             stmt = s;
-            interpreter = Interpreter::new(&mut table, &stmt);
+            interpreter = Interpreter::new(&mut table, &stmt,&lines);
         },
         Err(er) => {println!("Could not parse statements:{:?}",er);return;}
     }
 
-    let _res = interpreter.interpret();
+    let _exec_res = interpreter.interpret();
     
-    
+    match _exec_res {
+        Ok(_) => {},
+        Err(er) => println!("Error!\n{}",er)
+    }
 }

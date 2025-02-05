@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::expression::Value;
+use crate::{
+    badger_debug::{get_col, get_line_from_index,error},
+    expression::Value,
+};
 
 pub enum Entry {
     Pointer(u64),
@@ -14,25 +17,39 @@ pub struct SymbolTable {
 }
 
 impl SymbolTable {
-    pub fn add_symbol(&mut self,name:&str,value:Value) -> Result<u64,String> {
-        
+    pub fn add_symbol(
+        &mut self,
+        name: &str,
+        value: Value,
+        index: &usize,
+        lines: &Vec<usize>,
+    ) -> Result<u64, String> {
         if self.front.contains_key(name) {
-            return  Err("Identifier already decleared!".to_owned());
+            let l = get_line_from_index(lines, index);
+            let c = get_col(index, lines);
+            return Result::Err(format!("{} at line {}, {}", "Identifier already decleared", l, c));
         }
 
-        self.storage.insert(self.global_counter,Entry::Val(value));
-        self.front.insert(name.to_owned(),self.global_counter);
+        self.storage.insert(self.global_counter, Entry::Val(value));
+        self.front.insert(name.to_owned(), self.global_counter);
         self.global_counter = self.global_counter + 1;
 
-        return Ok(self.global_counter-1);
+        return Ok(self.global_counter - 1);
     }
-    pub fn new() -> SymbolTable{
-        SymbolTable { global_counter: 1000,
-            storage: HashMap::<u64,Entry>::new(),
-            front: HashMap::<String,u64>::new()
+    pub fn new() -> SymbolTable {
+        SymbolTable {
+            global_counter: 1000,
+            storage: HashMap::<u64, Entry>::new(),
+            front: HashMap::<String, u64>::new(),
         }
     }
-    pub fn get_from_addr(&self, addr: u64, level: u16) -> Result<Value, String> {
+    pub fn get_from_addr(
+        &self,
+        addr: u64,
+        level: u16,
+        index: &usize,
+        lines: &Vec<usize>,
+    ) -> Result<Value, String> {
         if level < 128 {
             if addr == 0 {
                 return Result::Err("Null pointer dereference!".to_owned());
@@ -44,31 +61,38 @@ impl SymbolTable {
                 match o_entry {
                     Option::Some(ent) => match ent {
                         Entry::Val(vale) => return Result::Ok(vale.clone()),
-                        Entry::Pointer(addr2) => self.get_from_addr(*addr2, level + 1),
+                        Entry::Pointer(addr2) => {
+                            self.get_from_addr(*addr2, level + 1, index, lines)
+                        }
                     },
-                    _ => return Result::Err("Adress does not exist!".to_owned()),
+                    _ => return error("Adress does not exist!", index, lines),
                 }
             } else {
-                return Result::Err("Adress does not exist!".to_owned());
+                return error("Adress does not exist!", index, lines);
             }
         } else {
-            return Result::Err("Nested dereferencing hit hard limit of 128!".to_owned());
+            return error("Nested dereferencing hit hard limit!", index, lines);
         }
     }
 
-    pub fn get_from_symbol(&self, symbol: &str) -> Result<Value, String> {
+    pub fn get_from_symbol(
+        &self,
+        symbol: &str,
+        index: &usize,
+        lines: &Vec<usize>,
+    ) -> Result<Value, String> {
         if self.front.contains_key(symbol) {
             let r_addr: Option<&u64> = self.front.get(symbol);
             match r_addr {
                 Option::Some(addr) => {
-                    return self.get_from_addr(*addr, 0);
+                    return self.get_from_addr(*addr, 0, index, lines);
                 }
                 _ => {
-                    return Result::Err("Symbol does not point to anything!".to_owned());
+                    return error("Symbol does not point to anything!", index, lines);
                 }
             }
         } else {
-            return Result::Err("Symbol does not exist!".to_owned());
+            return error("Symbol does not exist!", index, lines);
         }
     }
 }

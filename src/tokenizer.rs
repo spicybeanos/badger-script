@@ -76,15 +76,7 @@ pub struct Token {
     pub ttype: TokenType,
 }
 
-pub fn get_line_from_index(index: usize, lines: &Vec<usize>) -> usize {
-    // Find the first newline index greater than the given index
-    match lines.binary_search(&index) {
-        // If the index matches exactly a newline index, return the corresponding line number
-        Ok(pos) => pos + 1,
-        // If the index is within a range, return the line number of the closest previous newline
-        Err(pos) => pos + 1,
-    }
-}
+
 pub fn tokenize(src: String) -> (Vec<Token>, Vec<usize>) {
     let mut tok = Vec::<Token>::new();
     let text: Vec<char> = src.chars().collect();
