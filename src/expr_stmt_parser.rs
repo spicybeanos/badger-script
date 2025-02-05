@@ -131,25 +131,26 @@ impl<'a> ExprStmtParser<'a> {
     }
 
     fn primary(&mut self) -> Result<Expression, String> {
-        if self.match_tokentype(&[TokenType::False]) {
-            return Ok(Expression::Literal(Value::Boolean(false),self.current-1));
+        let mut index = 0;
+        if self.match_tokentype_index(&[TokenType::False],&mut index) {
+            return Ok(Expression::Literal(Value::Boolean(false),index));
         }
-        if self.match_tokentype(&[TokenType::True]) {
-            return Ok(Expression::Literal(Value::Boolean(true),self.current-1));
-        }
-
-        if let Some(num) = self.match_number_literal() {
-            return Ok(Expression::Literal(Value::Number(num),self.current-1));
-        }
-        if let Some(b) = self.match_boolean_literal() {
-            return Ok(Expression::Literal(Value::Boolean(b),self.current-1));
-        }
-        if let Some(string_value) = self.match_string_literal() {
-            return Ok(Expression::Literal(Value::StringVal(string_value),self.current-1));
+        if self.match_tokentype_index(&[TokenType::True],&mut index) {
+            return Ok(Expression::Literal(Value::Boolean(true),index));
         }
 
-        if let Some(string_value) = self.match_symbol() {
-            return Ok(Expression::Symbol(string_value,self.current-1));
+        if let Some((num,id)) = self.match_number_literal() {
+            return Ok(Expression::Literal(Value::Number(num),id));
+        }
+        if let Some((b,id)) = self.match_boolean_literal() {
+            return Ok(Expression::Literal(Value::Boolean(b),id));
+        }
+        if let Some((string_value,id)) = self.match_string_literal() {
+            return Ok(Expression::Literal(Value::StringVal(string_value),id));
+        }
+
+        if let Some((symbol,id)) = self.match_symbol() {
+            return Ok(Expression::Symbol(symbol,id));
         }
 
         if self.match_tokentype(&[TokenType::OpenParent]) {
@@ -213,38 +214,50 @@ impl<'a> ExprStmtParser<'a> {
         }
         return false;
     }
-    fn match_number_literal(&mut self) -> Option<f64> {
+    fn match_tokentype_index(&mut self, ttypes: &[TokenType],index:&mut usize) -> bool {
+        *index = self.peek().index;
+        for tt in ttypes {
+            if self.check(tt) {
+                self.advance();
+                return true;
+            }
+        }
+        return false;
+    }
+    fn match_number_literal(&mut self) -> Option<(f64,usize)> {
+        let index = self.peek().index;
         if let TokenType::NumberLiteral(num) = self.peek().ttype {
             self.advance(); // Move past the number
-            Some(num) // Return the extracted number
+            Some((num,index)) // Return the extracted number
         } else {
             None
         }
     }
-    fn match_boolean_literal(&mut self) -> Option<bool> {
+    fn match_boolean_literal(&mut self) -> Option<(bool,usize)> {
+        let index = self.peek().index;
         if let TokenType::BooleanLiteral(b) = self.peek().ttype {
             self.advance(); // Move past the number
-            Some(b) // Return the extracted number
+            Some((b,index)) // Return the extracted number
         } else {
             None
         }
     }
-    fn match_string_literal(&mut self) -> Option<String> {
+    fn match_string_literal(&mut self) -> Option<(String,usize)> {
         let token_type = self.peek().ttype.clone(); // Clone the token type to avoid borrowing issues
-
+        let index = self.peek().index;
         if let TokenType::StringLiteral(s) = token_type {
             self.advance(); // Now it's safe to advance
-            Some(s) // Return the extracted string
+            Some((s,index)) // Return the extracted string
         } else {
             None
         }
     }
-    fn match_symbol(&mut self) -> Option<String> {
+    fn match_symbol(&mut self) -> Option<(String,usize)> {
         let token_type = self.peek().ttype.clone(); // Clone the token type to avoid borrowing issues
-
+        let index = self.peek().index;
         if let TokenType::Identifier(s) = token_type {
             self.advance(); // Now it's safe to advance
-            Some(s) // Return the extracted string
+            Some((s,index)) // Return the extracted string
         } else {
             None
         }
