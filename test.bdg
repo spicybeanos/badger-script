@@ -1,1 +1,1 @@
-return "hello" + " world " + (1 < t);
+return "hello" + " world ";

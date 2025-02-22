@@ -1,0 +1,11 @@
+
+
+fxn main () {
+    text = "Hello " + "world!";
+    println(text);
+    println(add(1,2));
+}
+
+fxn:num add(a:num,b:num){
+    return a + b;
+}
