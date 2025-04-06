@@ -1,13 +1,15 @@
 use crate::{
-    badger_debug::{error, get_col, get_line_from_index}, symbol_table::SymbolTable, tokenizer::{Token, TokenType}
+    badger_debug::{error, get_col, get_line_from_index},
+    symbol_table::SymbolTable,
+    tokenizer::{Token, TokenType},
 };
 use std::fmt;
 
-
 #[derive(Clone)]
 pub enum Expression {
-    Symbol(String,usize),
-    Literal(Value,usize),
+    Symbol(String, usize),
+    Literal(Value, usize),
+    Identifier(String, usize),
     Unary(Token, Box<Expression>),
     Binary(Box<Expression>, Token, Box<Expression>),
     Group(Box<Expression>),
@@ -16,11 +18,12 @@ pub enum Expression {
 impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expression::Literal(v,_lindx) => write!(f, "{:?} ", v),
+            Expression::Literal(v, _lindx) => write!(f, "{:?} ", v),
             Expression::Unary(sgn, exp) => write!(f, "{:?}{:?} ", sgn, exp),
-            Expression::Symbol(s,_sindx) => write!(f, "{:?} ", s),
+            Expression::Symbol(s, _sindx) => write!(f, "{:?} ", s),
             Expression::Group(ex) => write!(f, "({:?}) ", ex),
             Expression::Binary(l, s, r) => write!(f, "{:?} {:?} {:?} ", l, s, r),
+            Expression::Identifier(name, _iindex) => write!(f, "{:?}", name),
         }
     }
 }
@@ -33,35 +36,41 @@ pub enum Value {
 }
 
 impl Expression {
-    pub fn evaluate(&self, table: &SymbolTable,debug_lines:&Vec<usize>) -> Result<Value, String> {
+    pub fn evaluate(&self, table: &SymbolTable, debug_lines: &Vec<usize>) -> Result<Value, String> {
         match self {
-            Expression::Symbol(sym,_sindx) => table.get_from_symbol(&sym,_sindx,debug_lines),
-            Expression::Literal(val_,_lindx) => Result::Ok(val_.clone()),
+            Expression::Symbol(sym, _sindx) => table.get_from_symbol(&sym, _sindx, debug_lines),
+            Expression::Literal(val_, _lindx) => Result::Ok(val_.clone()),
             Expression::Unary(sign, expr) => {
-                let r_: Result<Value, String> = expr.evaluate(table,debug_lines);
+                let r_: Result<Value, String> = expr.evaluate(table, debug_lines);
                 match r_ {
-                    Ok(_v_) => unary_signing(&_v_, &sign,debug_lines),
+                    Ok(_v_) => unary_signing(&_v_, &sign, debug_lines),
                     _ => r_,
                 }
             }
             Expression::Binary(left, sign, right) => {
-                let l_r: Result<Value, String> = left.evaluate(table,debug_lines);
-                let r_r: Result<Value, String> = right.evaluate(table,debug_lines);
+                let l_r: Result<Value, String> = left.evaluate(table, debug_lines);
+                let r_r: Result<Value, String> = right.evaluate(table, debug_lines);
 
                 match l_r {
                     Ok(_l_) => match r_r {
-                        Ok(_r_) => binary_operation(&_l_, &sign, &_r_,debug_lines),
+                        Ok(_r_) => binary_operation(&_l_, &sign, &_r_, debug_lines),
                         _ => r_r,
                     },
                     _ => l_r,
                 }
             }
-            Expression::Group(g) => g.evaluate(table,debug_lines),
+            Expression::Group(g) => g.evaluate(table, debug_lines),
+            Expression::Identifier(name, index) => table.get_from_symbol(name, index, debug_lines),
         }
     }
 }
 
-fn binary_operation(left: &Value, operator: &Token, right: &Value,lines:&Vec<usize>) -> Result<Value, String> {
+fn binary_operation(
+    left: &Value,
+    operator: &Token,
+    right: &Value,
+    lines: &Vec<usize>,
+) -> Result<Value, String> {
     match operator.ttype {
         TokenType::Plus => match left {
             Value::Number(ln) => match right {
@@ -71,9 +80,7 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value,lines:&Vec<usi
                 Value::StringVal(rs) => {
                     return Result::Ok(Value::StringVal(ln.to_string() + rs));
                 }
-                _ => {
-                    return opp_undef(operator,lines)
-                }
+                _ => return opp_undef(operator, lines),
             },
             Value::StringVal(ls) => match right {
                 Value::Number(rn) => {
@@ -86,162 +93,164 @@ fn binary_operation(left: &Value, operator: &Token, right: &Value,lines:&Vec<usi
                     return Result::Ok(Value::StringVal(ls.to_owned() + &rb.to_string()));
                 }
             },
-            _ => {
-                return opp_undef(operator,lines)
-            }
+            _ => return opp_undef(operator, lines),
         },
         TokenType::Minus => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln - rn));
                 }
-                _ => {
-                    return opp_undef(operator,lines)
-                }
+                _ => return opp_undef(operator, lines),
             },
-            _ => {
-                return opp_undef(operator,lines)
-            }
+            _ => return opp_undef(operator, lines),
         },
         TokenType::Star => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln * rn));
                 }
-                _ => return opp_undef(operator,lines),
+                _ => return opp_undef(operator, lines),
             },
-            _ => return opp_undef(operator,lines),
+            _ => return opp_undef(operator, lines),
         },
         TokenType::Slash => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln / rn));
                 }
-                _ => return opp_undef(operator,lines),
+                _ => return opp_undef(operator, lines),
             },
-            _ => return opp_undef(operator,lines),
+            _ => return opp_undef(operator, lines),
         },
         TokenType::Mod => match left {
             Value::Number(ln) => match right {
                 Value::Number(rn) => {
                     return Result::Ok(Value::Number(ln % rn));
                 }
-                _ => return opp_undef(operator,lines),
+                _ => return opp_undef(operator, lines),
             },
-            _ => return opp_undef(operator,lines),
+            _ => return opp_undef(operator, lines),
         },
 
         TokenType::And => match left {
             Value::Boolean(lb) => match right {
                 Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb && *rb)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
-            _ => opp_undef(operator,lines),
+            _ => opp_undef(operator, lines),
         },
         TokenType::Or => match left {
             Value::Boolean(lb) => match right {
                 Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb || *rb)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
-            _ => opp_undef(operator,lines),
+            _ => opp_undef(operator, lines),
         },
 
         TokenType::Equality => match left {
             Value::Boolean(lb) => match right {
                 Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb == *rb)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln == *rn)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::StringVal(ls) => match right {
                 Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls == *rs)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
         },
         TokenType::BangEquals => match left {
             Value::Boolean(lb) => match right {
                 Value::Boolean(rb) => Result::Ok(Value::Boolean(*lb != *rb)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln != *rn)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::StringVal(ls) => match right {
                 Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls != *rs)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
         },
 
         TokenType::Greater => match left {
-            Value::Boolean(_lb) => opp_undef(operator,lines),
+            Value::Boolean(_lb) => opp_undef(operator, lines),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln > *rn)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::StringVal(ls) => match right {
                 Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls > *rs)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
         },
         TokenType::GreaterEquals => match left {
-            Value::Boolean(_lb) => opp_undef(operator,lines),
+            Value::Boolean(_lb) => opp_undef(operator, lines),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln >= *rn)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::StringVal(ls) => match right {
                 Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls >= *rs)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
         },
         TokenType::Lesser => match left {
-            Value::Boolean(_lb) => opp_undef(operator,lines),
+            Value::Boolean(_lb) => opp_undef(operator, lines),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln < *rn)),
-                _ =>opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::StringVal(ls) => match right {
                 Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls < *rs)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
         },
         TokenType::LesserEquals => match left {
-            Value::Boolean(_lb) => opp_undef(operator,lines),
+            Value::Boolean(_lb) => opp_undef(operator, lines),
             Value::Number(ln) => match right {
                 Value::Number(rn) => Result::Ok(Value::Boolean(*ln <= *rn)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
             Value::StringVal(ls) => match right {
                 Value::StringVal(rs) => Result::Ok(Value::Boolean(*ls <= *rs)),
-                _ => opp_undef(operator,lines),
+                _ => opp_undef(operator, lines),
             },
         },
 
-        _ => opp_undef(operator,lines),
+        _ => opp_undef(operator, lines),
     }
 }
-fn opp_undef(operator: &Token,lines:&Vec<usize>) -> Result<Value, String> {
-    let l = get_line_from_index(lines,&operator.index);
+fn opp_undef(operator: &Token, lines: &Vec<usize>) -> Result<Value, String> {
+    let l = get_line_from_index(lines, &operator.index);
     let c = get_col(&operator.index, lines);
-    return Result::Err(format!("operation is not defined! at line {}, {}",l,c));
+    return Result::Err(format!("operation is not defined! at line {}, {}", l, c));
 }
 fn boolify(val: &Value) -> bool {
     match val {
         Value::Boolean(b) => *b,
         Value::Number(n) => *n > 0.0,
-        Value::StringVal(s) => !s.is_empty()
+        Value::StringVal(s) => !s.is_empty(),
     }
 }
-fn unary_signing(val: &Value, sign: &Token,lines:&Vec<usize>) -> Result<Value, String> {
+fn unary_signing(val: &Value, sign: &Token, lines: &Vec<usize>) -> Result<Value, String> {
     match sign.ttype {
         TokenType::Bang => Ok(Value::Boolean(!boolify(val))),
         TokenType::Minus => match val {
             Value::Number(n) => Result::Ok(Value::Number(-n)),
-            _ => error("Cannot use '-' on anything other than a 'num'",&sign.index,lines),
+            _ => error(
+                "Cannot use '-' on anything other than a 'num'",
+                &sign.index,
+                lines,
+            ),
         },
-        _ => error("Cannot use this operator in a unary expression!",&sign.index,lines),
+        _ => error(
+            "Cannot use this operator in a unary expression!",
+            &sign.index,
+            lines,
+        ),
     }
 }

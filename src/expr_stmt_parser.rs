@@ -148,6 +148,9 @@ impl<'a> ExprStmtParser<'a> {
         if let Some((string_value,id)) = self.match_string_literal() {
             return Ok(Expression::Literal(Value::StringVal(string_value),id));
         }
+        if let Some((identifer,id)) = self.match_identifier() {
+            return Ok(Expression::Identifier(identifer,id));
+        }
 
         if let Some((symbol,id)) = self.match_symbol() {
             return Ok(Expression::Symbol(symbol,id));
@@ -158,6 +161,12 @@ impl<'a> ExprStmtParser<'a> {
             self.consume(&TokenType::CloseParent, "Expected ')' after expression")?;
             return Ok(Expression::Group(Box::new(expr)));
         }
+
+        // if self.match_tokentype(&[TokenType::OpenSquare]) {
+        //     let expr: Expression = self.expression()?;
+        //     self.consume(&TokenType::CloseSquare, "Expected ')' after expression")?;
+        //     return Ok(Expression::Index(Box::new(expr)));
+        // }
 
         return self.error_ex(self.peek(), "Expected expression");
     }
@@ -246,6 +255,16 @@ impl<'a> ExprStmtParser<'a> {
         let token_type = self.peek().ttype.clone(); // Clone the token type to avoid borrowing issues
         let index = self.peek().index;
         if let TokenType::StringLiteral(s) = token_type {
+            self.advance(); // Now it's safe to advance
+            Some((s,index)) // Return the extracted string
+        } else {
+            None
+        }
+    }
+    fn match_identifier(&mut self) -> Option<(String,usize)> {
+        let token_type = self.peek().ttype.clone(); // Clone the token type to avoid borrowing issues
+        let index = self.peek().index;
+        if let TokenType::Identifier(s) = token_type {
             self.advance(); // Now it's safe to advance
             Some((s,index)) // Return the extracted string
         } else {

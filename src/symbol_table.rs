@@ -13,7 +13,7 @@ pub enum Entry {
 pub struct SymbolTable {
     global_counter: u64,
     storage: HashMap<u64, Entry>,
-    front: HashMap<String, u64>,
+    regsiter: HashMap<String, u64>,
 }
 
 impl SymbolTable {
@@ -24,14 +24,14 @@ impl SymbolTable {
         index: &usize,
         lines: &Vec<usize>,
     ) -> Result<u64, String> {
-        if self.front.contains_key(name) {
+        if self.regsiter.contains_key(name) {
             let l = get_line_from_index(lines, index);
             let c = get_col(index, lines);
             return Result::Err(format!("{} at line {}, {}", "Identifier already decleared", l, c));
         }
 
         self.storage.insert(self.global_counter, Entry::Val(value));
-        self.front.insert(name.to_owned(), self.global_counter);
+        self.regsiter.insert(name.to_owned(), self.global_counter);
         self.global_counter = self.global_counter + 1;
 
         return Ok(self.global_counter - 1);
@@ -40,7 +40,7 @@ impl SymbolTable {
         SymbolTable {
             global_counter: 1000,
             storage: HashMap::<u64, Entry>::new(),
-            front: HashMap::<String, u64>::new(),
+            regsiter: HashMap::<String, u64>::new(),
         }
     }
     pub fn get_from_addr(
@@ -81,8 +81,8 @@ impl SymbolTable {
         index: &usize,
         lines: &Vec<usize>,
     ) -> Result<Value, String> {
-        if self.front.contains_key(symbol) {
-            let r_addr: Option<&u64> = self.front.get(symbol);
+        if self.regsiter.contains_key(symbol) {
+            let r_addr: Option<&u64> = self.regsiter.get(symbol);
             match r_addr {
                 Option::Some(addr) => {
                     return self.get_from_addr(*addr, 0, index, lines);

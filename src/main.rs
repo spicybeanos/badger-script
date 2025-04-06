@@ -4,6 +4,7 @@ pub mod expr_stmt_parser;
 pub mod badger_debug;
 pub mod expression;
 pub mod tokenizer;
+// pub  mod virtual_machine;
 pub mod symbol_table;
 pub mod interpreter;
 pub mod statement;
