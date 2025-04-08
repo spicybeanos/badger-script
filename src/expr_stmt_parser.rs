@@ -38,12 +38,12 @@ impl<'a> ExprStmtParser<'a> {
         let mut init: Expression;
 
         match vtype {
-            TokenType::Num => init = Expression::Literal(Value::Number(0.0), self.current),
-            TokenType::Bool => init = Expression::Literal(Value::Boolean(false), self.current),
+            TokenType::Num => init = Expression::Literal(Value::Number(0.0), self.current - 1),
+            TokenType::Bool => init = Expression::Literal(Value::Boolean(false), self.current - 1),
             TokenType::Str => {
-                init = Expression::Literal(Value::StringVal("".to_string()), self.current)
+                init = Expression::Literal(Value::StringVal("".to_string()), self.current - 1)
             }
-            TokenType::Var => init = Expression::Literal(Value::Number(0.0), self.current),
+            TokenType::Var => init = Expression::Literal(Value::Number(0.0), self.current - 1),
             _ => return Err("Illegal type for a variable".to_string()),
         }
 
@@ -53,18 +53,32 @@ impl<'a> ExprStmtParser<'a> {
 
         self.consume(&TokenType::EoStmt, "Expect ';' after variable declaration.")?;
 
-        return Ok(Statement::VarDecl(name, init));
+        return Ok(Statement::VarDecl(name, init, vtype, self.current - 1));
     }
     fn declaration(&mut self) -> Option<Statement> {
+        let mut vtype: Option<TokenType> = Option::None;
         if self.match_tokentype(&[TokenType::Num]) {
-            let vd = self.var_declearation(TokenType::Num);
-            match vd {
-                Result::Ok(dec) => return Some(dec),
-                Result::Err(_) => {
-                    self.synchronize();
-                    return None;
+            vtype = Some(TokenType::Num);
+        } else if self.match_tokentype(&[TokenType::Bool]) {
+            vtype = Some(TokenType::Bool);
+        } else if self.match_tokentype(&[TokenType::Str]) {
+            vtype = Some(TokenType::Str);
+        } else if self.match_tokentype(&[TokenType::Var]) {
+            vtype = Some(TokenType::Var);
+        }
+
+        match vtype {
+            Some(typ) => {
+                let vd = self.var_declearation(typ);
+                match vd {
+                    Result::Ok(dec) => return Some(dec),
+                    Result::Err(_) => {
+                        self.synchronize();
+                        return None;
+                    }
                 }
             }
+            _ => {}
         }
 
         let st = self.statement();

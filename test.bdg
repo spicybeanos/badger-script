@@ -1,1 +1,2 @@
-return "hello" + " world ";
+str text = 24;
+return text;
