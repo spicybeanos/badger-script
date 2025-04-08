@@ -9,7 +9,7 @@ use std::fmt;
 pub enum Expression {
     Symbol(String, usize),
     Literal(Value, usize),
-    Identifier(String, usize),
+    Variable(String, usize),
     Unary(Token, Box<Expression>),
     Binary(Box<Expression>, Token, Box<Expression>),
     Group(Box<Expression>),
@@ -23,7 +23,7 @@ impl fmt::Debug for Expression {
             Expression::Symbol(s, _sindx) => write!(f, "{:?} ", s),
             Expression::Group(ex) => write!(f, "({:?}) ", ex),
             Expression::Binary(l, s, r) => write!(f, "{:?} {:?} {:?} ", l, s, r),
-            Expression::Identifier(name, _iindex) => write!(f, "{:?}", name),
+            Expression::Variable(name, _iindex) => write!(f, "{:?}", name),
         }
     }
 }
@@ -60,7 +60,7 @@ impl Expression {
                 }
             }
             Expression::Group(g) => g.evaluate(table, debug_lines),
-            Expression::Identifier(name, index) => table.get_from_symbol(name, index, debug_lines),
+            Expression::Variable(name, index) => table.get_from_symbol(name, index, debug_lines),
         }
     }
 }

@@ -1,7 +1,7 @@
 
 
 fxn main () {
-    text = "Hello " + "world!";
+    var text = "Hello " + "world!";
     println(text);
     println(add(1,2));
 }

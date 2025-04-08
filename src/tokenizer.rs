@@ -1,8 +1,6 @@
 use std::fmt;
 
-#[derive(Debug)]
-#[derive(PartialEq)]
-#[derive(Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
     Eof,
     EoStmt,
@@ -60,9 +58,9 @@ pub enum TokenType {
     Num,
     Str,
     Bool,
+    Var,
     IdentifierNotKeyword,
 }
-
 
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -75,7 +73,6 @@ pub struct Token {
     pub index: usize,
     pub ttype: TokenType,
 }
-
 
 pub fn tokenize(src: String) -> (Vec<Token>, Vec<usize>) {
     let mut tok = Vec::<Token>::new();
@@ -333,7 +330,7 @@ pub fn tokenize(src: String) -> (Vec<Token>, Vec<usize>) {
 pub fn is_keyword(word: &str) -> bool {
     match word {
         "true" | "false" | "if" | "else" | "fxn" | "while" | "break" | "continue" | "import"
-        | "return" | "num" | "str" | "bool" | "null" | "export" => true,
+        | "return" | "num" | "str" | "bool" | "null" | "export" | "var" => true,
         _ => false,
     }
 }
@@ -355,6 +352,7 @@ pub fn get_keyword(word: &str) -> TokenType {
         "bool" => TokenType::Bool,
         "null" => TokenType::Null,
         "export" => TokenType::Export,
+        "var" => TokenType::Var,
         _ => TokenType::IdentifierNotKeyword,
     }
 }

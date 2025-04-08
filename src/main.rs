@@ -43,7 +43,7 @@ fn main() {
     
     let mut table:SymbolTable = SymbolTable::new();
     let rst = parser.parse_statement();
-    let stmt : Vec<Statement>;
+    let stmt : Vec<Option<Statement>>;
     let mut interpreter :Interpreter<'_>;
     match rst {
         Ok(s) => {
