@@ -7,12 +7,13 @@ use std::fmt;
 
 #[derive(Clone)]
 pub enum Expression {
-    Symbol(String, usize),
+    SpecialSymbol(String, usize),
     Literal(Value, usize),
     Variable(String, usize),
     Unary(Token, Box<Expression>),
     Binary(Box<Expression>, Token, Box<Expression>),
     Group(Box<Expression>),
+    Assignment(String, Box<Expression>, usize),
 }
 
 impl fmt::Debug for Expression {
@@ -20,10 +21,11 @@ impl fmt::Debug for Expression {
         match self {
             Expression::Literal(v, _lindx) => write!(f, "{:?} ", v),
             Expression::Unary(sgn, exp) => write!(f, "{:?}{:?} ", sgn, exp),
-            Expression::Symbol(s, _sindx) => write!(f, "{:?} ", s),
+            Expression::SpecialSymbol(s, _) => write!(f, "{:?} ", s),
             Expression::Group(ex) => write!(f, "({:?}) ", ex),
             Expression::Binary(l, s, r) => write!(f, "{:?} {:?} {:?} ", l, s, r),
             Expression::Variable(name, _iindex) => write!(f, "{:?}", name),
+            Expression::Assignment(lhs, _, _) => write!(f, "{:?}", lhs),
         }
     }
 }
@@ -36,9 +38,15 @@ pub enum Value {
 }
 
 impl Expression {
-    pub fn evaluate(&self, table: &SymbolTable, debug_lines: &Vec<usize>) -> Result<Value, String> {
+    pub fn evaluate(
+        &self,
+        table: &mut SymbolTable,
+        debug_lines: &Vec<usize>,
+    ) -> Result<Value, String> {
         match self {
-            Expression::Symbol(sym, _sindx) => table.get_from_symbol(&sym, _sindx, debug_lines),
+            Expression::SpecialSymbol(sym, _sindx) => {
+                table.get_from_symbol(&sym, _sindx, debug_lines,0)
+            }
             Expression::Literal(val_, _lindx) => Result::Ok(val_.clone()),
             Expression::Unary(sign, expr) => {
                 let r_: Result<Value, String> = expr.evaluate(table, debug_lines);
@@ -60,7 +68,11 @@ impl Expression {
                 }
             }
             Expression::Group(g) => g.evaluate(table, debug_lines),
-            Expression::Variable(name, index) => table.get_from_symbol(name, index, debug_lines),
+            Expression::Variable(name, index) => table.get_from_symbol(name, index, debug_lines,0),
+            Expression::Assignment(name, rhs, s_idx) => {
+                let val = rhs.evaluate(table, debug_lines)?;
+                table.set_var_val(name, val, s_idx, debug_lines)
+            }
         }
     }
 }

@@ -11,7 +11,7 @@ pub fn get_line_from_index(lines: &Vec<usize>, index: &usize) -> usize {
 }
 pub fn get_col(index: &usize, lines: &Vec<usize>) -> usize {
     let l = get_line_from_index(lines, index);
-    if lines.len() == 0 {
+    if lines.len() <= 0 {
         return *index;
     }
 
@@ -24,6 +24,6 @@ pub fn get_col(index: &usize, lines: &Vec<usize>) -> usize {
 
 pub fn error(msg: &str, index: &usize, lines: &Vec<usize>) -> Result<Value, String> {
     let l = get_line_from_index(lines, index);
-    let c = get_col(index, lines);
-    return Result::Err(format!("{} at line {},{}", msg, l, c));
+    // let c = get_col(index, lines);
+    return Result::Err(format!("{} at line {}", msg, l));
 }

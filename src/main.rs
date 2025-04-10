@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-pub mod expr_stmt_parser;
+pub mod parser;
 pub mod badger_debug;
 pub mod expression;
 pub mod tokenizer;
@@ -8,7 +8,7 @@ pub mod tokenizer;
 pub mod symbol_table;
 pub mod interpreter;
 pub mod statement;
-use expr_stmt_parser::ExprStmtParser;
+use parser::ExprStmtParser;
 use interpreter::Interpreter;
 use statement::Statement;
 use symbol_table::SymbolTable;
@@ -41,7 +41,7 @@ fn main() {
     let mut parser: ExprStmtParser<'_> = 
     ExprStmtParser::new(&tokens,&lines,0);
     
-    let mut table:SymbolTable = SymbolTable::new();
+    let mut table:SymbolTable = SymbolTable::new(None);
     let rst = parser.parse_statement();
     let stmt : Vec<Option<Statement>>;
     let mut interpreter :Interpreter<'_>;

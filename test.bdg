@@ -1,2 +1,1 @@
-str text = 24;
-return text;
+return "Hello " + 69.3;

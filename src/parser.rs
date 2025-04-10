@@ -37,13 +37,13 @@ impl<'a> ExprStmtParser<'a> {
         self.consume_identifier(&mut name, "Expected variable name")?;
         let mut init: Expression;
 
+        let idx = self.peek().index - 1;
+
         match vtype {
-            TokenType::Num => init = Expression::Literal(Value::Number(0.0), self.current - 1),
-            TokenType::Bool => init = Expression::Literal(Value::Boolean(false), self.current - 1),
-            TokenType::Str => {
-                init = Expression::Literal(Value::StringVal("".to_string()), self.current - 1)
-            }
-            TokenType::Var => init = Expression::Literal(Value::Number(0.0), self.current - 1),
+            TokenType::Num => init = Expression::Literal(Value::Number(0.0), idx),
+            TokenType::Bool => init = Expression::Literal(Value::Boolean(false), idx),
+            TokenType::Str => init = Expression::Literal(Value::StringVal("".to_string()), idx),
+            TokenType::Var => init = Expression::Literal(Value::Number(0.0), idx),
             _ => return Err("Illegal type for a variable".to_string()),
         }
 
@@ -53,10 +53,11 @@ impl<'a> ExprStmtParser<'a> {
 
         self.consume(&TokenType::EoStmt, "Expect ';' after variable declaration.")?;
 
-        return Ok(Statement::VarDecl(name, init, vtype, self.current - 1));
+        return Ok(Statement::VarDecl(name, init, vtype, idx));
     }
     fn declaration(&mut self) -> Option<Statement> {
         let mut vtype: Option<TokenType> = Option::None;
+
         if self.match_tokentype(&[TokenType::Num]) {
             vtype = Some(TokenType::Num);
         } else if self.match_tokentype(&[TokenType::Bool]) {
@@ -72,7 +73,8 @@ impl<'a> ExprStmtParser<'a> {
                 let vd = self.var_declearation(typ);
                 match vd {
                     Result::Ok(dec) => return Some(dec),
-                    Result::Err(_) => {
+                    Result::Err(ex) => {
+                        println!("Error: {}", ex);
                         self.synchronize();
                         return None;
                     }
@@ -91,9 +93,26 @@ impl<'a> ExprStmtParser<'a> {
             }
         }
     }
+    fn block(&mut self) -> Result<Vec<Statement>, String> {
+        let mut statements: Vec<Statement> = Vec::<Statement>::new();
+        while !self.check(&TokenType::CloseBrace) && !self.is_at_end() {
+            let dec = self.declaration();
+            match dec {
+                Some(st) => statements.push(st),
+                _ => {}
+            }
+        }
+
+        self.consume(&TokenType::CloseBrace, "Expected '}' after block")?;
+
+        return Ok(statements);
+    }
     fn statement(&mut self) -> Result<Statement, String> {
         if self.match_tokentype(&[TokenType::Return]) {
             return self.return_statement();
+        }
+        if self.match_tokentype(&[TokenType::OpenBrace]) {
+            return Ok(Statement::Block(self.block()?));
         }
 
         return self.expr_statement();
@@ -113,7 +132,26 @@ impl<'a> ExprStmtParser<'a> {
         self.expression()
     }
     pub fn expression(&mut self) -> Result<Expression, String> {
-        self.boolean_logic()
+        self.assignment()
+    }
+    fn assignment(&mut self) -> Result<Expression, String> {
+        let expr = self.boolean_logic()?;
+
+        if self.match_tokentype(&[TokenType::Asign]) {
+            let equals = self.previous().clone();
+            let value = self.assignment()?;
+
+            match expr {
+                Expression::Variable(name, idx) => {
+                    return Ok(Expression::Assignment(name, Box::new(value), idx));
+                }
+                _ => {}
+            }
+
+            return self.error_ex(&equals, "Invalid assignment target");
+        }
+
+        return Ok(expr);
     }
     fn boolean_logic(&mut self) -> Result<Expression, String> {
         let mut expr: Expression = self.equality()?;
@@ -212,7 +250,7 @@ impl<'a> ExprStmtParser<'a> {
         }
 
         if let Some((symbol, id)) = self.match_symbol() {
-            return Ok(Expression::Symbol(symbol, id));
+            return Ok(Expression::SpecialSymbol(symbol, id));
         }
 
         if self.match_tokentype(&[TokenType::OpenParent]) {

@@ -1,14 +1,14 @@
 use crate::{expression::Value, statement::Statement, symbol_table::SymbolTable};
 
 pub struct Interpreter<'a> {
-    symbol_table: &'a mut SymbolTable,
+    symbol_table: &'a mut SymbolTable<'a>,
     statments: &'a Vec<Option<Statement>>,
     debug_lines: &'a Vec<usize>,
 }
 
 impl<'a> Interpreter<'a> {
     pub fn new(
-        table: &'a mut SymbolTable,
+        table: &'a mut SymbolTable<'a>,
         stmt: &'a Vec<Option<Statement>>,
         debug_lines: &'a Vec<usize>,
     ) -> Interpreter<'a> {

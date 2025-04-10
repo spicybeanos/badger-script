@@ -9,6 +9,7 @@ use crate::{
 pub enum Statement {
     Expr(Expression),
     Return(Expression),
+    Block(Vec<Statement>),
     VarDecl(String, Expression, TokenType, usize),
 }
 
@@ -23,8 +24,22 @@ impl Statement {
             Self::Expr(expr) => Self::visit_expr(&expr, table, debug_lines),
             Self::VarDecl(name, init, vtype, index) => {
                 Self::visit_var_decl(name, vtype, init, table, index, debug_lines)
-            }
+            },
+            Self::Block(statments) => Self::execute_block(statments,SymbolTable::new(Some(&table)),debug_lines)
         }
+    }
+    fn execute_block(
+        statements:&Vec<Statement>,
+        table:SymbolTable,
+        debug_lines: &Vec<usize>
+    ) -> Result<Value, String> {
+        
+        let mut local_table = table;
+        for stmt in statements {
+            stmt.accept(&mut local_table,debug_lines)?;
+        }
+
+        return Ok(Value::Boolean(true));
     }
     fn visit_var_decl(
         name: &String,

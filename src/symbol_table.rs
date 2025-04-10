@@ -1,22 +1,17 @@
 use std::collections::HashMap;
 
 use crate::{
-    badger_debug::{get_col, get_line_from_index,error},
+    badger_debug::{error, get_col, get_line_from_index},
     expression::Value,
 };
 
-pub enum Entry {
-    Pointer(u64),
-    Val(Value),
-}
-
-pub struct SymbolTable {
+pub struct SymbolTable<'a> {
     global_counter: u64,
-    storage: HashMap<u64, Entry>,
-    regsiter: HashMap<String, u64>,
+    map: HashMap<String, Value>,
+    encolsing: Box<Option<&'a SymbolTable<'a>>>,
 }
 
-impl SymbolTable {
+impl<'a> SymbolTable<'a> {
     pub fn add_symbol(
         &mut self,
         name: &str,
@@ -24,75 +19,108 @@ impl SymbolTable {
         index: &usize,
         lines: &Vec<usize>,
     ) -> Result<u64, String> {
-        if self.regsiter.contains_key(name) {
+        if self.map.contains_key(name) {
             let l = get_line_from_index(lines, index);
             let c = get_col(index, lines);
-            return Result::Err(format!("{} at line {}, {}", "Identifier already decleared", l, c));
+            return Result::Err(format!(
+                "{} at line {}, {}",
+                "Identifier already decleared", l, c
+            ));
         }
 
-        self.storage.insert(self.global_counter, Entry::Val(value));
-        self.regsiter.insert(name.to_owned(), self.global_counter);
+        self.map.insert(name.to_owned(), value);
         self.global_counter = self.global_counter + 1;
 
         return Ok(self.global_counter - 1);
     }
-    pub fn new() -> SymbolTable {
+    pub fn new(parent_scope: Option<&'a SymbolTable<'_>>) -> SymbolTable<'a> {
         SymbolTable {
             global_counter: 1000,
-            storage: HashMap::<u64, Entry>::new(),
-            regsiter: HashMap::<String, u64>::new(),
+            map: HashMap::<String, Value>::new(),
+            encolsing: Box::new(parent_scope),
         }
     }
-    pub fn get_from_addr(
-        &self,
-        addr: u64,
-        level: u16,
+    pub fn set_var_val(
+        &mut self,
+        name: &str,
+        val: Value,
         index: &usize,
         lines: &Vec<usize>,
     ) -> Result<Value, String> {
-        if level < 128 {
-            if addr == 0 {
-                return Result::Err("Null pointer dereference!".to_owned());
-            }
+        let og_value = self.get_from_symbol(name, index, lines, 0)?;
 
-            if self.storage.contains_key(&addr) {
-                let o_entry: Option<&Entry> = self.storage.get(&addr);
-
-                match o_entry {
-                    Option::Some(ent) => match ent {
-                        Entry::Val(vale) => return Result::Ok(vale.clone()),
-                        Entry::Pointer(addr2) => {
-                            self.get_from_addr(*addr2, level + 1, index, lines)
-                        }
-                    },
-                    _ => return error("Adress does not exist!", index, lines),
+        match og_value {
+            Value::Boolean(_b) => match val {
+                Value::Boolean(_) => {}
+                _ => {
+                    return error(
+                        "Cannot assign different typed value to different types variable",
+                        index,
+                        lines,
+                    )
                 }
-            } else {
-                return error("Adress does not exist!", index, lines);
-            }
-        } else {
-            return error("Nested dereferencing hit hard limit!", index, lines);
+            },
+            Value::Number(_b) => match val {
+                Value::Number(_) => {}
+                _ => {
+                    return error(
+                        "Cannot assign different typed value to different types variable",
+                        index,
+                        lines,
+                    )
+                }
+            },
+            Value::StringVal(_b) => match val {
+                Value::StringVal(_) => {}
+                _ => {
+                    return error(
+                        "Cannot assign different typed value to different types variable",
+                        index,
+                        lines,
+                    )
+                }
+            },
         }
+
+        *self.map.get_mut(name).unwrap() = val.clone();
+        return Ok(val);
     }
 
     pub fn get_from_symbol(
         &self,
-        symbol: &str,
+        var_name: &str,
         index: &usize,
         lines: &Vec<usize>,
+        level: usize,
     ) -> Result<Value, String> {
-        if self.regsiter.contains_key(symbol) {
-            let r_addr: Option<&u64> = self.regsiter.get(symbol);
-            match r_addr {
-                Option::Some(addr) => {
-                    return self.get_from_addr(*addr, 0, index, lines);
-                }
+        if self.map.contains_key(var_name) {
+            let entry = self.map.get(var_name);
+
+            match entry {
+                Some(val) => return Ok(val.clone()),
                 _ => {
-                    return error("Symbol does not point to anything!", index, lines);
+                    if level < 256 {
+                        match *self.encolsing {
+                            Some(ref table) => {
+                                return table.get_from_symbol(var_name, index, lines, level + 1);
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    return error(
+                        &format!("Symbol '{}' does not exist!", var_name),
+                        index,
+                        lines,
+                    );
                 }
             }
         } else {
-            return error("Symbol does not exist!", index, lines);
+            return error(
+                &format!("Symbol '{}' does not exist!", var_name),
+                index,
+                lines,
+            );
         }
     }
 }
