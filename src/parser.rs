@@ -114,8 +114,23 @@ impl<'a> ExprStmtParser<'a> {
         if self.match_tokentype(&[TokenType::OpenBrace]) {
             return Ok(Statement::Block(self.block()?));
         }
+        if self.match_tokentype(&[TokenType::If]) {
+            return self.if_statement();
+        }
 
         return self.expr_statement();
+    }
+    fn if_statement(&mut self) -> Result<Statement, String> {
+        self.consume(&TokenType::OpenParent, "Expect '(' after 'if'")?;
+        let condition = self.expression()?;
+        self.consume(&TokenType::CloseParent, "Expect ')' after condition")?;
+        let then = self.statement()?;
+        let mut else_branch : Option<Statement> = None;
+
+        if self.match_tokentype(&[TokenType::Else]) {
+            else_branch = Some(self.statement()?);
+        }
+        return Ok(Statement::IfStmt(condition, Box::new(then), Box::new(else_branch)));
     }
     fn return_statement(&mut self) -> Result<Statement, String> {
         let value = self.expression()?;

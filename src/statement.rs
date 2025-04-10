@@ -1,6 +1,6 @@
 use crate::{
     badger_debug::error,
-    expression::{Expression, Value},
+    expression::{boolify, Expression, Value},
     symbol_table::SymbolTable,
     tokenizer::TokenType,
 };
@@ -10,6 +10,7 @@ pub enum Statement {
     Expr(Expression),
     Return(Expression),
     Block(Vec<Statement>),
+    IfStmt(Expression, Box<Statement>, Box<Option<Statement>>),
     VarDecl(String, Expression, TokenType, usize),
 }
 
@@ -24,19 +25,45 @@ impl Statement {
             Self::Expr(expr) => Self::visit_expr(&expr, table, debug_lines),
             Self::VarDecl(name, init, vtype, index) => {
                 Self::visit_var_decl(name, vtype, init, table, index, debug_lines)
-            },
-            Self::Block(statments) => Self::execute_block(statments,SymbolTable::new(Some(&table)),debug_lines)
+            }
+            Self::Block(statments) => {
+                Self::execute_block(statments, SymbolTable::new(Some(&table)), debug_lines)
+            }
+            Self::IfStmt(condition, then, else_branch) => Self::execute_if(condition,then,else_branch,table,debug_lines)
         }
     }
+    fn execute_if(
+        condition:&Expression,
+        then:&Statement,
+        else_branch:&Option<Statement>,
+        table: &mut SymbolTable,
+        lines: &Vec<usize>
+    ) -> Result<Value, String>{
+        let value = condition.evaluate(table, lines)?;
+        let truthy = boolify(&value);
+        if truthy {
+            then.accept(table, lines)?;
+            return Ok(Value::Boolean(true));
+        }
+        else{
+            match else_branch {
+                Some(stmt) => {
+                    stmt.accept(table,lines)?;
+                }
+                _ => {}
+            }
+        }
+
+        return Ok(Value::Boolean(false));
+    }
     fn execute_block(
-        statements:&Vec<Statement>,
-        table:SymbolTable,
-        debug_lines: &Vec<usize>
+        statements: &Vec<Statement>,
+        table: SymbolTable,
+        debug_lines: &Vec<usize>,
     ) -> Result<Value, String> {
-        
         let mut local_table = table;
         for stmt in statements {
-            stmt.accept(&mut local_table,debug_lines)?;
+            stmt.accept(&mut local_table, debug_lines)?;
         }
 
         return Ok(Value::Boolean(true));

@@ -241,7 +241,7 @@ fn opp_undef(operator: &Token, lines: &Vec<usize>) -> Result<Value, String> {
     let c = get_col(&operator.index, lines);
     return Result::Err(format!("operation is not defined! at line {}, {}", l, c));
 }
-fn boolify(val: &Value) -> bool {
+pub fn boolify(val: &Value) -> bool {
     match val {
         Value::Boolean(b) => *b,
         Value::Number(n) => *n > 0.0,
