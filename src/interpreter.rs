@@ -1,14 +1,16 @@
 use crate::{expression::Value, statement::Statement, symbol_table::SymbolTable};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Interpreter<'a> {
-    symbol_table: &'a mut SymbolTable<'a>,
+    symbol_table: Rc<RefCell<SymbolTable>>,
     statments: &'a Vec<Option<Statement>>,
     debug_lines: &'a Vec<usize>,
 }
 
 impl<'a> Interpreter<'a> {
     pub fn new(
-        table: &'a mut SymbolTable<'a>,
+        table: Rc<RefCell<SymbolTable>>,
         stmt: &'a Vec<Option<Statement>>,
         debug_lines: &'a Vec<usize>,
     ) -> Interpreter<'a> {
@@ -37,6 +39,6 @@ impl<'a> Interpreter<'a> {
         return Ok(0);
     }
     pub fn execute(&mut self, stmt: &Statement) -> Result<Value, String> {
-        stmt.accept(&mut self.symbol_table, &self.debug_lines)
+        stmt.accept(Rc::clone(&self.symbol_table), &self.debug_lines)
     }
 }

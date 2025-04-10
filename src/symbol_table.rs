@@ -1,17 +1,19 @@
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use crate::{
     badger_debug::{error, get_col, get_line_from_index},
     expression::Value,
 };
 
-pub struct SymbolTable<'a> {
-    global_counter: u64,
-    map: HashMap<String, Value>,
-    encolsing: Box<Option<&'a SymbolTable<'a>>>,
+pub struct SymbolTable {
+    pub global_counter: u64,
+    pub map: HashMap<String, Value>,
+    pub encolsing: Option<Rc<RefCell<SymbolTable>>>,
 }
 
-impl<'a> SymbolTable<'a> {
+impl SymbolTable {
     pub fn add_symbol(
         &mut self,
         name: &str,
@@ -33,11 +35,11 @@ impl<'a> SymbolTable<'a> {
 
         return Ok(self.global_counter - 1);
     }
-    pub fn new(parent_scope: Option<&'a SymbolTable<'_>>) -> SymbolTable<'a> {
+    pub fn new(parent_scope: Option<Rc<RefCell<SymbolTable>>>) -> SymbolTable {
         SymbolTable {
             global_counter: 1000,
-            map: HashMap::<String, Value>::new(),
-            encolsing: Box::new(parent_scope),
+            map: HashMap::new(),
+            encolsing: parent_scope,
         }
     }
     pub fn set_var_val(
@@ -46,6 +48,7 @@ impl<'a> SymbolTable<'a> {
         val: Value,
         index: &usize,
         lines: &Vec<usize>,
+        level: usize
     ) -> Result<Value, String> {
         let og_value = self.get_from_symbol(name, index, lines, 0)?;
 
@@ -81,8 +84,18 @@ impl<'a> SymbolTable<'a> {
                 }
             },
         }
-
-        *self.map.get_mut(name).unwrap() = val.clone();
+        if self.map.contains_key(name) {
+            *self.map.get_mut(name).unwrap() = val.clone();
+        } else {
+            match &mut self.encolsing {
+                Some(tbl) => {
+                    if level < 256 {
+                        tbl.borrow_mut().set_var_val(name, val.clone(), index, lines,level + 1)?;
+                    }
+                }
+                _ => {}
+            }
+        }
         return Ok(val);
     }
 
@@ -100,9 +113,9 @@ impl<'a> SymbolTable<'a> {
                 Some(val) => return Ok(val.clone()),
                 _ => {
                     if level < 256 {
-                        match *self.encolsing {
+                        match &self.encolsing {
                             Some(ref table) => {
-                                return table.get_from_symbol(var_name, index, lines, level + 1);
+                                return table.borrow_mut().get_from_symbol(var_name, index, lines, level + 1);
                             }
                             _ => {}
                         }
@@ -116,6 +129,14 @@ impl<'a> SymbolTable<'a> {
                 }
             }
         } else {
+            if level < 256 {
+                match &self.encolsing {
+                    Some(ref table) => {
+                        return table.borrow_mut().get_from_symbol(var_name, index, lines, level + 1);
+                    }
+                    _ => {}
+                }
+            }
             return error(
                 &format!("Symbol '{}' does not exist!", var_name),
                 index,

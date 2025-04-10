@@ -14,6 +14,8 @@ use statement::Statement;
 use symbol_table::SymbolTable;
 use tokenizer::tokenize;
 use tokenizer::Token;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -41,14 +43,14 @@ fn main() {
     let mut parser: ExprStmtParser<'_> = 
     ExprStmtParser::new(&tokens,&lines,0);
     
-    let mut table:SymbolTable = SymbolTable::new(None);
+    let table:SymbolTable = SymbolTable::new(None);
     let rst = parser.parse_statement();
     let stmt : Vec<Option<Statement>>;
     let mut interpreter :Interpreter<'_>;
     match rst {
         Ok(s) => {
             stmt = s;
-            interpreter = Interpreter::new(&mut table, &stmt,&lines);
+            interpreter = Interpreter::new(Rc::<RefCell<SymbolTable>>::new(RefCell::new(table)), &stmt,&lines);
         },
         Err(er) => {println!("Could not parse statements:{:?}",er);return;}
     }

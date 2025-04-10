@@ -3,6 +3,8 @@ use crate::{
     symbol_table::SymbolTable,
     tokenizer::{Token, TokenType},
 };
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::fmt;
 
 #[derive(Clone)]
@@ -40,12 +42,12 @@ pub enum Value {
 impl Expression {
     pub fn evaluate(
         &self,
-        table: &mut SymbolTable,
+        table:Rc<RefCell<SymbolTable>>,
         debug_lines: &Vec<usize>,
     ) -> Result<Value, String> {
         match self {
             Expression::SpecialSymbol(sym, _sindx) => {
-                table.get_from_symbol(&sym, _sindx, debug_lines,0)
+                table.borrow_mut().get_from_symbol(&sym, _sindx, debug_lines,0)
             }
             Expression::Literal(val_, _lindx) => Result::Ok(val_.clone()),
             Expression::Unary(sign, expr) => {
@@ -56,7 +58,7 @@ impl Expression {
                 }
             }
             Expression::Binary(left, sign, right) => {
-                let l_r: Result<Value, String> = left.evaluate(table, debug_lines);
+                let l_r: Result<Value, String> = left.evaluate(Rc::clone(&table), debug_lines);
                 let r_r: Result<Value, String> = right.evaluate(table, debug_lines);
 
                 match l_r {
@@ -68,10 +70,10 @@ impl Expression {
                 }
             }
             Expression::Group(g) => g.evaluate(table, debug_lines),
-            Expression::Variable(name, index) => table.get_from_symbol(name, index, debug_lines,0),
+            Expression::Variable(name, index) => table.borrow_mut().get_from_symbol(name, index, debug_lines,0),
             Expression::Assignment(name, rhs, s_idx) => {
-                let val = rhs.evaluate(table, debug_lines)?;
-                table.set_var_val(name, val, s_idx, debug_lines)
+                let val = rhs.evaluate(Rc::clone(&table), debug_lines)?;
+                table.borrow_mut().set_var_val(name, val, s_idx, debug_lines,0)
             }
         }
     }
