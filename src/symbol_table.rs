@@ -19,7 +19,7 @@ impl SymbolTable {
         name: &str,
         value: Value,
         index: &usize,
-        lines: &Vec<usize>,
+        lines: &Vec<usize>
     ) -> Result<u64, String> {
         if self.map.contains_key(name) {
             let l = get_line_from_index(lines, index);
@@ -75,6 +75,16 @@ impl SymbolTable {
             },
             Value::StringVal(_b) => match val {
                 Value::StringVal(_) => {}
+                _ => {
+                    return error(
+                        "Cannot assign different typed value to different types variable",
+                        index,
+                        lines,
+                    )
+                }
+            },
+            Value::Function(_f) => match val {
+                Value::Function(_) => {}
                 _ => {
                     return error(
                         "Cannot assign different typed value to different types variable",

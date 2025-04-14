@@ -281,6 +281,7 @@ pub fn tokenize(src: String) -> (Vec<Token>, Vec<usize>) {
                 }
                 
                 let _lex_ = substring(&text, start, length);
+                current = current - 1;
                 let num: f64 = _lex_.clone().parse::<f64>().unwrap();
                 tok.push(Token {
                     index: start,

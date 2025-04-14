@@ -1,6 +1,7 @@
 use crate::{
     badger_debug::error,
     expression::{boolify, Expression, Value},
+    fxn::{BadgerFunction, Callable},
     symbol_table::SymbolTable,
     tokenizer::TokenType,
 };
@@ -10,6 +11,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub enum Statement {
     Expr(Expression),
+    Function(String,usize, Vec<String>, Vec<Statement>),
     Return(Expression),
     Block(Vec<Statement>),
     IfStmt(Expression, Box<Statement>, Box<Option<Statement>>),
@@ -24,12 +26,8 @@ impl Statement {
         debug_lines: &Vec<usize>,
     ) -> Result<Value, String> {
         match self {
-            Self::Return(rexpr) => {
-                Self::visit_return(rexpr, Rc::clone(&table), debug_lines)
-            }
-            Self::Expr(expr) => {
-                Self::visit_expr(expr, Rc::clone(&table), debug_lines)
-            }
+            Self::Return(rexpr) => Self::visit_return(rexpr, Rc::clone(&table), debug_lines),
+            Self::Expr(expr) => Self::visit_expr(expr, Rc::clone(&table), debug_lines),
             Self::VarDecl(name, init, vtype, index) => {
                 Self::visit_var_decl(name, vtype, init, Rc::clone(&table), index, debug_lines)
             }
@@ -43,7 +41,28 @@ impl Statement {
             Self::WhileStmt(condition, body) => {
                 Self::execute_while(condition, body, Rc::clone(&table), debug_lines)
             }
+            Self::Function(name,index, args, body) => {
+                Self::visit_declear_function(name,*index, args, body, table, debug_lines)
+            }
         }
+    }
+    fn visit_declear_function(
+        name: &String,
+        index:usize,
+        params: &Vec<String>,
+        body: &Vec<Statement>,
+        table: Rc<RefCell<SymbolTable>>,
+        lines: &Vec<usize>,
+    ) -> Result<Value, String> {
+        let fxn = Value::Function(Callable::Custom(
+            params.len(),
+            BadgerFunction::new(&name, &params, &body),
+        ));
+        table.borrow_mut().add_symbol(name,fxn,&index,lines)?;
+        return Ok(Value::Function(Callable::Custom(
+            params.len(),
+            BadgerFunction::new(&name, &params, &body),
+        )));
     }
     fn execute_if(
         condition: &Expression,
@@ -143,9 +162,14 @@ impl Statement {
                     );
                 }
             },
+            _ => {
+                return error("Expression is not of expected type", index, debug_lines);
+            }
         }
 
-        table.borrow_mut().add_symbol(name, value, index, debug_lines)?;
+        table
+            .borrow_mut()
+            .add_symbol(name, value, index, debug_lines)?;
 
         return Ok(Value::Boolean(true));
     }
@@ -162,11 +186,12 @@ impl Statement {
         debug_lines: &Vec<usize>,
     ) -> Result<Value, String> {
         let val: Value = expr.evaluate(table, debug_lines)?;
-        match &val {
-            Value::Boolean(b) => println!("{}", b),
-            Value::StringVal(s) => println!("{}", s),
-            Value::Number(n) => println!("{}", n),
-        }
+        // match &val {
+        //     Value::Boolean(b) => println!("{}", b),
+        //     Value::StringVal(s) => println!("{}", s),
+        //     Value::Number(n) => println!("{}", n),
+        //     Value::Function(fxn) => println!("{:?}", fxn),
+        // }
         return Ok(val);
     }
 }

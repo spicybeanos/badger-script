@@ -31,32 +31,22 @@ impl<'a> ExprStmtParser<'a> {
 
         return Ok(stmt);
     }
-    fn var_declearation(&mut self, vtype: TokenType) -> Result<Statement, String> {
-        let mut name: String = "".to_string();
-
-        self.consume_identifier(&mut name, "Expected variable name")?;
-        let mut init: Expression;
-
-        let idx = self.peek().index - 1;
-
-        match vtype {
-            TokenType::Num => init = Expression::Literal(Value::Number(0.0), idx),
-            TokenType::Bool => init = Expression::Literal(Value::Boolean(false), idx),
-            TokenType::Str => init = Expression::Literal(Value::StringVal("".to_string()), idx),
-            TokenType::Var => init = Expression::Literal(Value::Number(0.0), idx),
-            _ => return Err("Illegal type for a variable".to_string()),
-        }
-
-        if self.match_tokentype(&[TokenType::Asign]) {
-            init = self.parse_expression()?;
-        }
-
-        self.consume(&TokenType::EoStmt, "Expect ';' after variable declaration.")?;
-
-        return Ok(Statement::VarDecl(name, init, vtype, idx));
-    }
     fn declaration(&mut self) -> Option<Statement> {
         let mut vtype: Option<TokenType> = Option::None;
+
+        if self.match_tokentype(&[TokenType::Fxn]) {
+            let try_fxn = self.function("function");
+            match try_fxn {
+                Ok(fxn) => {
+                    return Some(fxn);
+                }
+                Err(exc) => {
+                    println!("Error: {}", exc);
+                    self.synchronize();
+                    return None;
+                }
+            }
+        }
 
         if self.match_tokentype(&[TokenType::Num]) {
             vtype = Some(TokenType::Num);
@@ -93,6 +83,70 @@ impl<'a> ExprStmtParser<'a> {
             }
         }
     }
+    fn function(&mut self, kind: &str) -> Result<Statement, String> {
+        // let rtype = self.consume_token_types(
+        //     &[TokenType::Num, TokenType::Str, TokenType::Bool],
+        //     &format!("Expected {} type here", kind),
+        // )?;
+        let mut name: String = "".to_string();
+        let tname = self.consume_identifier(&mut name, &format!("Expect {} name", kind))?.to_owned();
+
+        self.consume(
+            &TokenType::OpenParent,
+            &format!("Expect '(' after {} name", kind),
+        )?;
+        let mut params = Vec::<String>::new();
+        if !self.check(&TokenType::CloseParent) {
+            let mut comma = true;
+            while comma {
+                if params.len() >= 255 {
+                    let err = self.error(self.peek(), "Can't have more than 255 params");
+                    match err {
+                        Err(e) => return Err(e),
+                        _ => {}
+                    }
+                }
+                let mut param_name: String = "".to_owned();
+                let _tok = self.consume_identifier(&mut param_name, "Expected param name")?;
+                params.push(param_name.clone());
+
+                comma = self.match_tokentype(&[TokenType::Comma]);
+            }
+        }
+
+        self.consume(
+            &TokenType::OpenBrace,
+            &format!("Expect '{{' before {} body", kind),
+        )?;
+        let body = self.block()?;
+
+        return Ok(Statement::Function(name,tname.index, params, body));
+    }
+    fn var_declearation(&mut self, vtype: TokenType) -> Result<Statement, String> {
+        let mut name: String = "".to_string();
+
+        self.consume_identifier(&mut name, "Expected variable name")?;
+        let mut init: Expression;
+
+        let idx = self.peek().index - 1;
+
+        match vtype {
+            TokenType::Num => init = Expression::Literal(Value::Number(0.0), idx),
+            TokenType::Bool => init = Expression::Literal(Value::Boolean(false), idx),
+            TokenType::Str => init = Expression::Literal(Value::StringVal("".to_string()), idx),
+            TokenType::Var => init = Expression::Literal(Value::Number(0.0), idx),
+            _ => return Err("Illegal type for a variable".to_string()),
+        }
+
+        if self.match_tokentype(&[TokenType::Asign]) {
+            init = self.parse_expression()?;
+        }
+
+        self.consume(&TokenType::EoStmt, "Expect ';' after variable declaration.")?;
+
+        return Ok(Statement::VarDecl(name, init, vtype, idx));
+    }
+
     fn block(&mut self) -> Result<Vec<Statement>, String> {
         let mut statements: Vec<Statement> = Vec::<Statement>::new();
         while !self.check(&TokenType::CloseBrace) && !self.is_at_end() {
@@ -252,8 +306,46 @@ impl<'a> ExprStmtParser<'a> {
             let right: Expression = self.unary()?;
             return Ok(Expression::Unary(opr, Box::new(right)));
         }
+        return self.call();
+        // return self.primary();
+    }
 
-        return self.primary();
+    fn call(&mut self) -> Result<Expression, String> {
+        let mut expr = self.primary()?;
+        loop {
+            if self.match_tokentype(&[TokenType::OpenParent]) {
+                expr = self.finish_call(&expr)?;
+            } else {
+                break;
+            }
+        }
+
+        return Ok(expr);
+    }
+
+    fn finish_call(&mut self, callee: &Expression) -> Result<Expression, String> {
+        let mut args: Vec<Expression> = Vec::<Expression>::new();
+
+        if !self.check(&TokenType::CloseParent) {
+            loop {
+                if args.len() > 255 {
+                    return Err("Can't have more than 256 arguments.".to_string());
+                }
+
+                args.push(self.expression()?);
+                if !self.match_tokentype(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(&TokenType::CloseParent, "Expected ')' after arguments")?;
+
+        return Ok(Expression::Call(
+            Box::<Expression>::new(callee.clone()),
+            paren.clone(),
+            args,
+        ));
     }
 
     fn primary(&mut self) -> Result<Expression, String> {
@@ -353,6 +445,19 @@ impl<'a> ExprStmtParser<'a> {
     fn consume(&mut self, ttype: &TokenType, err_msg: &str) -> Result<&Token, String> {
         if self.check(ttype) {
             return Ok(self.advance());
+        }
+        return self.error(self.peek(), err_msg);
+    }
+
+    fn _consume_token_types(
+        &mut self,
+        ttypes: &[TokenType],
+        err_msg: &str,
+    ) -> Result<&Token, String> {
+        for tt in ttypes {
+            if self.check(tt) {
+                return Ok(self.advance());
+            }
         }
         return self.error(self.peek(), err_msg);
     }

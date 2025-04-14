@@ -24,6 +24,6 @@ pub fn get_col(index: &usize, lines: &Vec<usize>) -> usize {
 
 pub fn error(msg: &str, index: &usize, lines: &Vec<usize>) -> Result<Value, String> {
     let l = get_line_from_index(lines, index);
-    // let c = get_col(index, lines);
-    return Result::Err(format!("{} at line {}", msg, l));
+    let c = get_col(index, lines);
+    return Result::Err(format!("{} at line {}, {}", msg, l,c));
 }

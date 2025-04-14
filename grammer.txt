@@ -1,0 +1,14 @@
+type -> "num"|"bool"|"str"
+
+unary          → ( "!" | "-" ) unary | call ;
+call           → primary ( "(" arguments? ")" )* ;
+arguments      → expression ( "," expression )* ;
+
+declaration    → funDecl
+               | varDecl
+               | statement ;
+
+funDecl        → "fxn" function ;
+function       → IDENTIFIER "(" parameters? ")" block ;
+
+parameters     → IDENTIFIER ( "," type IDENTIFIER )* ;

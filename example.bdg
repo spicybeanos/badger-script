@@ -6,6 +6,6 @@ fxn main () {
     println(add(1,2));
 }
 
-fxn:num add(a:num,b:num){
+fxn add( a, b){
     return a + b;
 }
