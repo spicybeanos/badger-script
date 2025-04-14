@@ -25,13 +25,23 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         println!(
-            "No input file specified!\nUsage : {0} [input file] (optional)[output file]",
+            "No input file specified!\nUsage : {0} (c|i) [input file]",
             args[0]
         );
         return;
     }
     let choice = args[1].clone();
     let _inp_file_path: String = args[2].clone();
+
+    if choice != "c" && choice != "i" {
+        println!(
+            "Wrong choice specified!\nUsage : {0} (c|i) [input file]",
+            args[0]
+        );
+        println!("c -> compile to IR code");
+        println!("i -> interpret code");
+        return;
+    }
 
     let contents =
         fs::read_to_string(_inp_file_path).expect("Should have been able to read the file");
