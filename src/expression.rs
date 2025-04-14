@@ -4,8 +4,8 @@ use crate::{
     tokenizer::{Token, TokenType},
 };
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub enum Expression {
@@ -32,22 +32,34 @@ impl fmt::Debug for Expression {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Value {
     Number(f64),
     StringVal(String),
     Boolean(bool),
 }
 
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Boolean(b) => write!(f, "{}", b),
+            Self::Number(n) => write!(f, "{}", n),
+            Self::StringVal(s) => write!(f, "{}", s),
+        }
+    }
+}
+
 impl Expression {
     pub fn evaluate(
         &self,
-        table:Rc<RefCell<SymbolTable>>,
+        table: Rc<RefCell<SymbolTable>>,
         debug_lines: &Vec<usize>,
     ) -> Result<Value, String> {
         match self {
             Expression::SpecialSymbol(sym, _sindx) => {
-                table.borrow_mut().get_from_symbol(&sym, _sindx, debug_lines,0)
+                table
+                    .borrow_mut()
+                    .get_from_symbol(&sym, _sindx, debug_lines, 0)
             }
             Expression::Literal(val_, _lindx) => Result::Ok(val_.clone()),
             Expression::Unary(sign, expr) => {
@@ -70,10 +82,16 @@ impl Expression {
                 }
             }
             Expression::Group(g) => g.evaluate(table, debug_lines),
-            Expression::Variable(name, index) => table.borrow_mut().get_from_symbol(name, index, debug_lines,0),
+            Expression::Variable(name, index) => {
+                table
+                    .borrow_mut()
+                    .get_from_symbol(name, index, debug_lines, 0)
+            }
             Expression::Assignment(name, rhs, s_idx) => {
                 let val = rhs.evaluate(Rc::clone(&table), debug_lines)?;
-                table.borrow_mut().set_var_val(name, val, s_idx, debug_lines,0)
+                table
+                    .borrow_mut()
+                    .set_var_val(name, val, s_idx, debug_lines, 0)
             }
         }
     }
