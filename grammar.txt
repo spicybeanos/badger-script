@@ -1,0 +1,38 @@
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+               | boolean ;
+boolean        → equality ("&" | "|" equality)*
+equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term           → factor ( ( "-" | "+" ) factor )* ;
+factor         → unary ( ( "/" | "*" ) unary )* ;
+unary          → ( "!" | "-" ) unary
+               | primary ;
+primary        → NUMBER | STRING | "true" | "false" | "nil"
+               | "(" expression ")" ;
+
+primary        → "true" | "false" | "null"
+               | NUMBER | STRING
+               | "(" expression ")"
+               | IDENTIFIER ;
+
+program        → declaration* EOF ;
+
+declaration    → varDecl
+               | statement ;
+
+statement      → exprStmt
+               | ifStmt
+               | printStmt
+               | whileStmt
+               | block ;
+
+block          → "{" declaration* "}" ;
+
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+               | equality ;
+
+ifStmt         → "if" "(" expression ")" statement
+               ( "else" statement )? ;
+whileStmt      → "while" "(" expression ")" statement ;
