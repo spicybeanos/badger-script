@@ -86,6 +86,7 @@ fn main() {
 
                 match result {
                     Ok(_) => {
+                        compiler.ir_code.push("end".to_owned());
                         for ir in compiler.ir_code {
                             println!("{} ",ir);
                         }
