@@ -1,6 +1,6 @@
-var x = 5;
+var i = 5;
 
-while(x>0){
-    return "Hello world";
-    x = x - 1;
+while(i>0){
+    return "H" * i;
+    i = i - 1;
 }

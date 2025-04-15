@@ -19,6 +19,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use symbol_table::SymbolTable;
 use tokenizer::tokenize;
+use std::fs::File;
+use std::io::prelude::*;
 use tokenizer::Token;
 
 fn main() {
@@ -32,6 +34,14 @@ fn main() {
     }
     let choice = args[1].clone();
     let _inp_file_path: String = args[2].clone();
+
+    let mut output_file: String;
+    if args.len() > 3 {
+        output_file = args[3].clone();
+    } else {
+        output_file = _inp_file_path.clone();
+        output_file.push_str(".ir");
+    }
 
     if choice != "c" && choice != "i" {
         println!(
@@ -87,12 +97,24 @@ fn main() {
                 match result {
                     Ok(_) => {
                         compiler.ir_code.push("end".to_owned());
+                        let mut ir_code: String = "".to_owned();
+
                         for ir in compiler.ir_code {
-                            println!("{} ",ir);
+                            ir_code.push_str(&ir);
+                            ir_code.push_str("\n");
                         }
+
+                        let file = File::create(output_file);
+                        match file {
+                            Ok(mut f) => {
+                                let _ = write!(f,"{}",ir_code);
+                            },
+                            _ => {}
+                        }
+
                     }
                     Err(er) => {
-                        println!("Error compiling! {}",er);
+                        println!("Error compiling! {}", er);
                     }
                 }
             }

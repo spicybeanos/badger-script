@@ -143,6 +143,18 @@ fn binary_operation(
                 }
                 _ => return opp_undef(operator, lines),
             },
+            Value::StringVal(sl) => match right {
+                Value::Number(rn) => {
+                    let mut rep = *rn;
+                    let mut mstr = "".to_owned();
+                    while rep > 0.0 {
+                        mstr.push_str(sl);
+                        rep = rep - 1.0;
+                    }
+                    return Result::Ok(Value::StringVal(mstr));
+                }
+                _ => return opp_undef(operator, lines),
+            },
             _ => return opp_undef(operator, lines),
         },
         TokenType::Slash => match left {
