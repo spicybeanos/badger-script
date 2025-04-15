@@ -1,6 +1,13 @@
-var i = 5;
 
-while(i>0){
-    return "H" * i;
-    i = i - 1;
+var n = 113;
+var i = 2;
+var is_prime = true;
+
+while(i < n){
+    if(n % i == 0){
+        is_prime = false;
+    }
+    i = i + 1;
 }
+
+return "Number is prime : " + is_prime;

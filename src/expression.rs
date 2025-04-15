@@ -25,9 +25,9 @@ impl fmt::Debug for Expression {
             Expression::Unary(sgn, exp) => write!(f, "{:?}{:?} ", sgn, exp),
             Expression::SpecialSymbol(s, _) => write!(f, "{:?} ", s),
             Expression::Group(ex) => write!(f, "({:?}) ", ex),
-            Expression::Binary(l, s, r) => write!(f, "{:?} {:?} {:?} ", l, s, r),
+            Expression::Binary(l, s, r) => write!(f, "({:?} {:?} {:?}) ", l, s, r),
             Expression::Variable(name, _iindex) => write!(f, "{:?}", name),
-            Expression::Assignment(lhs, _, _) => write!(f, "{:?}", lhs),
+            Expression::Assignment(lhs, rhs, _) => write!(f, "{:?} = {:?}", lhs,rhs),
         }
     }
 }
