@@ -44,7 +44,7 @@ impl fmt::Debug for Value {
         match self {
             Self::Boolean(b) => write!(f, "{}", b),
             Self::Number(n) => write!(f, "{}", n),
-            Self::StringVal(s) => write!(f, "{}", s),
+            Self::StringVal(s) => write!(f, "'{}'", s),
         }
     }
 }

@@ -1,3 +1,9 @@
+usage:
+- Compile to IR code
+	`cargo run c path/to/file.bdg (optional)path/to/output/file.xyz`
+- Run code
+	`cargo run i path/to/file.bdg`
+
 - Delimitators:
 `() {} [] : ; . , + - * / % > = < " ' ? @`
 - For comment use `#`
